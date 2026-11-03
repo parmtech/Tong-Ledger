@@ -56,3 +56,9 @@ Flutter SDK/Android SDK not installed in conversation container; source validati
 - User can create budget from one of 30 actual allocation templates, custom build, edit category amounts/name/income/period/date, duplicate and delete. Actual spending projection excludes card settlements/transfers and loan principal.
 - Important: v0.3 has **no secure backup/restore** or signed production APK/AAB; phone loss/key invalidation can lose records. Do not claim production financial data safety.
 - Next priority: secure backup/recovery and full edit/archive + device tests. Maintain Android-first code; cross-platform targets deferred.
+
+## 2026-11-03 — product, UX and architecture audit v2 merged
+- Documentation-only [PR #3](https://github.com/parmtech/Tong-Ledger/pull/3) merged at commit `6e55d3d2d3d0bee5002f613d2b011f74b01bdd61`. No app code changed; existing verified v0.3 app still has pre-release security limitations.
+- New canonical source: `docs/MASTER_BLUEPRINT_V2.md`; 22 risk findings, full UX layouts, balanced journal architecture, Android-first P0/P1 roadmap and future multi-platform boundaries.
+- `feature/v0.4-backup-recovery` is a **separate work-in-progress code branch**, not merged/verified by this audit. Re-evaluate against v2 backup, old-device-key recovery and migration requirements before continuing code.
+- Next work: P0 finance journal and migration/recovery plan → P1 UI navigation → budget improvements; never claim a signed/secure release without verified evidence.
