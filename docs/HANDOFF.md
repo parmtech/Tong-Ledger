@@ -4,7 +4,7 @@
 **Owner:** ParmTech
 **Licence:** Apache-2.0
 **Product:** Premium, open-source, manual-first money manager with budget planning; Android-first Flutter source; optional Windows later.
-**Current status:** Initial documentation and code foundation. **NOT production-ready**. Generated native Android/Windows projects and signed installers NOT supplied yet. Domain UI sample must never be used for real private data until encrypted persistence and QA.
+**Current status:** Android v0.2 encrypted-snapshot DEVELOPMENT foundation merged into main in PR #1. CI analysis/tests/debug APK build succeeded (run 41627444476). **NOT production-ready:** backup/recovery, comprehensive editing, PIN/biometrics and production signing remain outstanding. Use fictional data for device testing.
 
 ## Non-negotiable product-owner requirements
 1. Manually add a bank, then any number of different savings/salary/expenses accounts under it. No online banking connection is required.
@@ -38,3 +38,11 @@ Flutter SDK/Android SDK not installed in conversation container; source validati
 - CI: GitHub Actions YAML committed, but no green run was observable through available connected action results. Do not call tests or APK built successfully until verified.
 - Next developer must verify Actions on https://github.com/parmtech/Tong-Ledger/actions, fix compilation/lint/test errors if any, then implement encrypted persistent finance storage and the complete forms.
 - Android is the only current release target. No Windows, macOS, Linux or iOS package claimed.
+
+## 2026-11-03 — verified v0.2 development milestone
+- PR #1 merged in squash commit `26ee173377f09837ee9c21397ad1e7fc554fffc3`.
+- CI [run 41627444476](https://github.com/parmtech/Tong-Ledger/actions/runs/41627444476) passed analyse, tests and Android debug APK build, artifact `tong-ledger-android-debug` expires 2026-11-17.
+- v0.2 includes AES-GCM encrypted local snapshot with OS secure key, records for manually-added banks/accounts/cards/loans/assets/income and transactions, fictional demo isolation, plan selection persistence. See docs/STORAGE_DESIGN.md.
+- Security and UX gaps remain: no backed-up recovery, no full edit/archive, no complete budget editor, no tested signed release; no device QA yet.
+- Android first; no iPhone/macOS/Linux packages or Windows EXE delivered.
+- Before future work, read the latest IMPLEMENTATION_STATUS.md and this appended note. Do NOT rely on older 'no encrypted storage' statements above; they describe the previous v0.1 milestone.
