@@ -1,5 +1,7 @@
 # Permanent Engineering Handoff — Tong Ledger
 
+> **IMPORTANT — Blueprint Audit 2026-11-03:** New coding must use [MASTER_BLUEPRINT_V2.md](MASTER_BLUEPRINT_V2.md), [BLUEPRINT_AUDIT_2026_11_03.md](BLUEPRINT_AUDIT_2026_11_03.md), [UX_INFORMATION_ARCHITECTURE_V2.md](UX_INFORMATION_ARCHITECTURE_V2.md), [FINANCIAL_DOMAIN_V2.md](FINANCIAL_DOMAIN_V2.md), [ENGINEERING_ROADMAP_V2.md](ENGINEERING_ROADMAP_V2.md). Existing notes below contain historical v0.2/v0.3 milestone information. The current main code is v0.3 and **has not implemented the v2 targets**. `feature/v0.4-backup-recovery` is unfinished and must be audited before merge. Do not build financial functionality directly from historical spec without consulting v2. Backup/recovery and P0 accounting integrity take precedence over visual extras.
+
 **Source of truth:** https://github.com/parmtech/Tong-Ledger
 **Owner:** ParmTech
 **Licence:** Apache-2.0

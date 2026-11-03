@@ -1,5 +1,8 @@
 # Tong Ledger — Implementation Status
 
+> **Planning update (2026-11-03):** [Master Blueprint v2](MASTER_BLUEPRINT_V2.md), [Full Audit](BLUEPRINT_AUDIT_2026_11_03.md), [UX v2](UX_INFORMATION_ARCHITECTURE_V2.md), [Finance Engine v2](FINANCIAL_DOMAIN_V2.md), [Roadmap v2](ENGINEERING_ROADMAP_V2.md) are **specification only** and do not update implemented v0.3 functionality. The experimental `feature/v0.4-backup-recovery` branch has not been reviewed/merged under these new gates. Latest verified code status below remains v0.3.
+
+
 **Updated:** 2026-11-03 · **Current developer milestone: v0.3, merged to main**  
 **Repository:** https://github.com/parmtech/Tong-Ledger  
 **Status:** Android-first, open-source **development/testing** build only — not a production release.

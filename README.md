@@ -8,7 +8,7 @@
 
 **Tong Ledger by ParmTech** is a free, open-source, offline-first personal finance and budget planner with a luxury-inspired experience. **Android is the first release target**; Flutter keeps the business logic portable to iOS, Windows, macOS and Linux for later releases.
 
-> **Current status: FOUNDATION / DEVELOPMENT.** No production APK or live banking service exists yet. Sample data and experimental UI are NOT a secure place for real financial records. Release only after encryption, persistence, testing and Play Store compliance gates are complete.
+> **Current status: v0.3 ANDROID DEVELOPMENT / NOT A PUBLIC RELEASE.** There is a verified debug APK, but secure recovery, complete accounting and real-device QA are unfinished. Use fictional data only. The **v2 blueprint is a future target**, not a claim its features work today.
 
 ## What Tong Ledger will manage
 
@@ -24,7 +24,13 @@
 
 | Read first | Purpose |
 | --- | --- |
-| [Wiki start page](docs/WIKI_HOME.md) | Beautiful documentation portal / getting started |\n| [Master blueprint](docs/MASTER_BLUEPRINT.md) | A-to-Z product scope, calculations, screens, release criteria |
+| [Wiki start page](docs/WIKI_HOME.md) | Project overview and introduction |
+| **[Master blueprint v2](docs/MASTER_BLUEPRINT_V2.md)** | **Canonical audited A-to-Z plan for all future work** |
+| [Audit: flaws & fixes](docs/BLUEPRINT_AUDIT_2026_11_03.md) | Risk priorities and practical corrections |
+| [UX and luxury app design v2](docs/UX_INFORMATION_ARCHITECTURE_V2.md) | Screen-by-screen flow, wireframes, colours and interaction patterns |
+| [Financial domain v2](docs/FINANCIAL_DOMAIN_V2.md) | Correct accounting, cards, loans, as-of and stable categories |
+| [Engineering roadmap v2](docs/ENGINEERING_ROADMAP_V2.md) | Secure recovery, modular build plan, rollout gates |
+| [Original v0.1 blueprint](docs/MASTER_BLUEPRINT.md) | Historical feature brief (not canonical) |
 | [30 budget plans](docs/BUDGET_TEMPLATES.md) | Six collections of real allocation plans |
 | [Architecture](docs/ARCHITECTURE.md) | Shared domain layers and application boundaries |
 | [Data model](docs/DATA_MODEL.md) | Institution/account/card/loan/ledger schema |

@@ -15,13 +15,20 @@
 | 🏦 [Banks, accounts, cards and loans](#the-way-money-is-organised) | How real-world finances are represented |
 | 📊 [Ready-made budget planner](BUDGET_TEMPLATES.md) | 30 editable actual budgeting allocation plans |
 | 🧭 [Quick-start tutorial](ONBOARDING_TUTORIALS.md) | Step-by-step first-use guide |
-| 🧠 [Complete A-to-Z blueprint](MASTER_BLUEPRINT.md) | Product architecture, users, financial rules, delivery |
+| 🧠 **[Audited master blueprint v2](MASTER_BLUEPRINT_V2.md)** | Canonical A-to-Z product definition |
+| 🧪 [Full blueprint audit](BLUEPRINT_AUDIT_2026_11_03.md) | Every important flaw and its correction |
+| 🎨 [UX screen-by-screen v2](UX_INFORMATION_ARCHITECTURE_V2.md) | Premium design, dashboard wireframe and usability |
+| 📒 [Financial engine specification v2](FINANCIAL_DOMAIN_V2.md) | Precise account/card/loan/transaction rules |
+| 🛠️ [Engineering roadmap v2](ENGINEERING_ROADMAP_V2.md) | Safe Android-first implementation and future platforms |
+| 📚 [Original master blueprint v0.1](MASTER_BLUEPRINT.md) | Historical starting specification |
 | 🏗️ [Engineering architecture](ARCHITECTURE.md) | Flutter modules, models, boundaries |
 | 🔐 [Security and privacy](SECURITY_PRIVACY.md) | Planned protection, current demo limitations |
 | 🎨 [Luxury UI and UX](UX_DESIGN.md) | Design direction, accessibility, navigation |
 | ✅ [Tests and release gates](TEST_PLAN.md) | What must pass before Android release |
 | 🗺️ [Roadmap](ROADMAP.md) | What ships first and what comes later |
 | 🔧 [Implementation status](IMPLEMENTATION_STATUS.md) | What is already committed vs remaining |
+
+> **Blueprint note (2026-11-03):** v2 design describes the NEXT implementation target. The Android source on main remains v0.3 development status; the experimental v0.4 backup branch is unmerged. Read [Implementation Status](IMPLEMENTATION_STATUS.md) before making release claims.
 
 ## Product tour
 

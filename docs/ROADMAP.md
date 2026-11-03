@@ -1,3 +1,5 @@
+> **Historical roadmap.** The active phase ordering, release gates and long-term platform strategy are in [Engineering Roadmap v2](ENGINEERING_ROADMAP_V2.md). Read that plan before starting new code.
+
 # Android-First Roadmap
 
 | Phase | Output | Done when |

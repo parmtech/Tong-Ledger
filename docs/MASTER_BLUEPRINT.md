@@ -1,3 +1,5 @@
+> **ARCHIVED PRODUCT BRIEF — v0.1.** The audited [Master Blueprint v2](MASTER_BLUEPRINT_V2.md) is the current design and architecture source of truth. This historical document is kept for earlier decisions. Do not implement conflicting requirements from this file without the v2 decision log.
+
 # Tong Ledger — A-to-Z Product & Engineering Blueprint
 
 Version 0.1 • 3 November 2026 • Publisher: ParmTech • Product name: Tong Ledger • Public open-source repo • Android first
