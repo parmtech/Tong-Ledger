@@ -1,5 +1,10 @@
 # Tong Ledger — Implementation Status
 
+> **2026-11-04: P0 accounting safety milestone merged:** [PR #4](https://github.com/parmtech/Tong-Ledger/pull/4), commit `ab88997915be62a17c333c8fa48fca96197530bd`. The new [balanced journal projection](JOURNAL_PROJECTION_BRIDGE.md) translates all eight legacy entry types into debit/credit postings **without writing or migrating a single persisted record**. [GitHub Actions run 41648816107](https://github.com/parmtech/Tong-Ledger/actions/runs/41648816107) passed Dart analysis, tests and Android debug APK build. This is a tested domain bridge, **not a new production app release, an immutable persisted journal, or a data recovery guarantee**.
+>
+> **Critical backup blocker:** [Issue #5](https://github.com/parmtech/Tong-Ledger/issues/5) documents why the experimental `feature/v0.4-backup-recovery` branch cannot recover an existing vault after Android device-key invalidation. This branch must remain unmerged pending a recovery-only path and real-device tests.
+
+
 > **Blueprint audit merged to main:** [PR #3](https://github.com/parmtech/Tong-Ledger/pull/3), commit `6e55d3d2d3d0bee5002f613d2b011f74b01bdd61`. This is a **documentation-only** milestone, not a change to the installed app.
 >
 > **Planning update (2026-11-03):** [Master Blueprint v2](MASTER_BLUEPRINT_V2.md), [Full Audit](BLUEPRINT_AUDIT_2026_11_03.md), [UX v2](UX_INFORMATION_ARCHITECTURE_V2.md), [Finance Engine v2](FINANCIAL_DOMAIN_V2.md), [Roadmap v2](ENGINEERING_ROADMAP_V2.md) are **specification only** and do not update implemented v0.3 functionality. The experimental `feature/v0.4-backup-recovery` branch has not been reviewed/merged under these new gates. Latest verified code status below remains v0.3.
