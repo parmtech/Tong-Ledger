@@ -121,8 +121,7 @@ class _LedgerShellState extends State<LedgerShell> {
           ? 'Demo-only change; not saved.'
           : 'Saved in your encrypted local vault.');
     } catch (error) {
-      _message('Could not save. Existing data was preserved: ' +
-          error.toString());
+      _message('Could not save. Existing data was preserved: ${error.toString()}');
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -130,8 +129,7 @@ class _LedgerShellState extends State<LedgerShell> {
 
   String _id() {
     _serial++;
-    return DateTime.now().microsecondsSinceEpoch.toString() +
-        '-' + _serial.toString();
+    return '${DateTime.now().microsecondsSinceEpoch}-$_serial';
   }
 
   void _message(String message) {
@@ -233,7 +231,7 @@ class _LedgerShellState extends State<LedgerShell> {
     final money = Money.tryParse(values[key] ?? '');
     if (money == null || money.cents < 0 ||
         (!zeroOk && money.cents == 0)) {
-      _message('Please enter a valid positive AUD amount for ' + key + '.');
+      _message('Please enter a valid positive AUD amount for $key.');
       return null;
     }
     return money.cents;
@@ -610,7 +608,7 @@ class _LedgerShellState extends State<LedgerShell> {
           child: ListTile(
             leading: const Icon(Icons.pie_chart_outline, color: _gold),
             title: Text(_activeTemplate.name),
-            subtitle: Text(_activeTemplate.group + ' • editable plan coming later'),
+            subtitle: Text('${_activeTemplate.group} • custom allocations coming later'),
             trailing: const Icon(Icons.chevron_right),
             onTap: () {
               setState(() => _selectedTab = 2);
@@ -659,8 +657,7 @@ class _LedgerShellState extends State<LedgerShell> {
           ListTile(
             leading: const Icon(Icons.credit_card, color: _gold),
             title: Text(card.name),
-            subtitle: Text('Available: ' +
-                Money(card.limitCents - (snapshot.cardsOwed[card.id] ?? 0)).aud),
+            subtitle: Text('Available: ${Money(card.limitCents - (snapshot.cardsOwed[card.id] ?? 0)).aud}'),
             trailing: Text(Money(snapshot.cardsOwed[card.id] ?? 0).aud),
           ),
         _heading('Loans — bank or independent lender'),
@@ -676,7 +673,7 @@ class _LedgerShellState extends State<LedgerShell> {
           ListTile(
             leading: const Icon(Icons.directions_car, color: _gold),
             title: Text(asset.name),
-            subtitle: Text('As of ' + asset.asOf.toIso8601String().substring(0, 10)),
+            subtitle: Text('As of ${asset.asOf.toIso8601String().substring(0, 10)}'),
             trailing: Text(Money(asset.valuationCents).aud),
           ),
         _heading('Income sources — forecasts only'),
@@ -710,7 +707,7 @@ class _LedgerShellState extends State<LedgerShell> {
                   ListTile(
                     dense: true,
                     title: Text(allocation.key),
-                    subtitle: Text(allocation.value.toString() + '%'),
+                    subtitle: Text('${allocation.value}%'),
                     trailing: Text(Money(example[allocation.key] ?? 0).aud),
                   ),
               ],
@@ -741,8 +738,7 @@ class _LedgerShellState extends State<LedgerShell> {
         _heading('30 ready-made budget plans'),
         const Padding(
           padding: EdgeInsets.all(8),
-          child: Text('Select an actual spending plan, not a visual theme. '
-              'Budget editing, cloning and persistence come in later milestones.'),
+          child: Text('Select a real budget plan. Selection is saved; category editing is coming in the next milestone.'),
         ),
         for (final group in budgetCollections) ...[
           _heading(group),
