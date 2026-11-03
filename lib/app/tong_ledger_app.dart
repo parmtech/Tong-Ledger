@@ -443,6 +443,76 @@ class _LedgerShellState extends State<LedgerShell> {
     ));
   }
 
+  Future<void> _addTransfer() async {
+    final from = await _choose(
+      'Transfer from', _book.accounts, (CashAccount a) => a.name,
+    );
+    if (!mounted || from == null) return;
+    final targets = _book.accounts
+        .where((account) => account.id != from.id).toList();
+    final to = await _choose(
+      'Transfer to', targets, (CashAccount a) => a.name,
+    );
+    if (!mounted || to == null) return;
+    final fields = await _form('Transfer between my accounts', [
+      ('amount', 'Transfer amount (AUD)'),
+    ]);
+    if (!mounted || fields == null) return;
+    final amount = _cents(fields, 'amount');
+    if (amount == null) return;
+    await _post(LedgerEntry(
+      id: _id(), type: LedgerType.transfer,
+      amountCents: amount, sourceAccountId: from.id,
+      destinationAccountId: to.id, at: DateTime.now().toUtc(),
+    ));
+  }
+
+  Future<void> _addAsset() async {
+    final fields = await _form('Add an asset', [
+      ('name', 'Asset name (car, house, investment...)'),
+      ('value', 'Estimated current value (AUD)'),
+    ]);
+    if (!mounted || fields == null) return;
+    final value = _cents(fields, 'value', zeroOk: true);
+    if (value == null) return;
+    final name = (fields['name'] ?? '').trim();
+    if (name.isEmpty) {
+      _message('Asset name is required.');
+      return;
+    }
+    await _commit((book) => book.assets.add(AssetRecord(
+      id: _id(), name: name, valuationCents: value,
+      asOf: DateTime.now().toUtc(),
+    )));
+  }
+
+  Future<void> _addIncomeSource() async {
+    final destination = await _choose(
+      'Which account receives income?',
+      _book.accounts, (CashAccount a) => a.name,
+    );
+    if (!mounted || destination == null) return;
+    final fields = await _form('Add expected income source', [
+      ('name', 'Employer, business or source'),
+      ('amount', 'Expected take-home amount (AUD)'),
+      ('cadence', 'Frequency (weekly / fortnightly / monthly / irregular)'),
+    ]);
+    if (!mounted || fields == null) return;
+    final amount = _cents(fields, 'amount');
+    if (amount == null) return;
+    final name = (fields['name'] ?? '').trim();
+    final cadence = (fields['cadence'] ?? '').trim().toLowerCase();
+    const allowed = ['weekly', 'fortnightly', 'monthly', 'irregular'];
+    if (name.isEmpty || !allowed.contains(cadence)) {
+      _message('Please provide a name and a supported frequency.');
+      return;
+    }
+    await _commit((book) => book.incomeSources.add(IncomeSource(
+      id: _id(), name: name, expectedCents: amount,
+      cadence: cadence, destinationAccountId: destination.id,
+    )));
+  }
+
   void _showActions() {
     if (_busy || _loading || _loadError != null) return;
     showModalBottomSheet<void>(
@@ -455,6 +525,9 @@ class _LedgerShellState extends State<LedgerShell> {
             ListTile(title: Text(_demo ? 'Add to Demo Ledger' : 'Add to Local Vault')),
             _action(sheetContext, Icons.account_balance, 'Bank / institution', _addBank),
             _action(sheetContext, Icons.account_balance_wallet, 'Cash account', _addAccount),
+            _action(sheetContext, Icons.swap_horiz, 'Transfer between accounts', _addTransfer),
+            _action(sheetContext, Icons.directions_car, 'Asset / valuation', _addAsset),
+            _action(sheetContext, Icons.work_outline, 'Income source and frequency', _addIncomeSource),
             _action(sheetContext, Icons.credit_card, 'Credit card', _addCard),
             _action(sheetContext, Icons.payments, 'Loan (private lender supported)', _addLoan),
             _action(sheetContext, Icons.shopping_cart, 'Cash expense', _addExpense),
