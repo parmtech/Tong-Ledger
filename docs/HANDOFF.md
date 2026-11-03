@@ -62,3 +62,11 @@ Flutter SDK/Android SDK not installed in conversation container; source validati
 - New canonical source: `docs/MASTER_BLUEPRINT_V2.md`; 22 risk findings, full UX layouts, balanced journal architecture, Android-first P0/P1 roadmap and future multi-platform boundaries.
 - `feature/v0.4-backup-recovery` is a **separate work-in-progress code branch**, not merged/verified by this audit. Re-evaluate against v2 backup, old-device-key recovery and migration requirements before continuing code.
 - Next work: P0 finance journal and migration/recovery plan → P1 UI navigation → budget improvements; never claim a signed/secure release without verified evidence.
+
+## 2026-11-04 — P0 balanced journal projection merged + recovery blocker
+- [PR #4](https://github.com/parmtech/Tong-Ledger/pull/4) merged at `ab88997915be62a17c333c8fa48fca96197530bd`.
+- [GitHub Actions 41648816107](https://github.com/parmtech/Tong-Ledger/actions/runs/41648816107): Flutter analysis, all tests and Android debug APK + artifact upload **passed**.
+- `lib/domain/balanced_journal.dart` is a **read-only migration bridge** projecting existing v0.3 bank/card/loan events into balanced accounting postings. Includes synthetic opening equity and independent parity tests. **NOT** a persisted immutable journal, no encrypted schema change, no real financial data upgrade. See `docs/JOURNAL_PROJECTION_BRIDGE.md`.
+- [P0 issue #5](https://github.com/parmtech/Tong-Ledger/issues/5): experimental v0.4 backup branch cannot restore a portable backup when the Android device key is missing and encrypted existing vault remains. Do not merge that branch until dedicated locked-vault restore, staged rekey/rollback, negative tests and actual-device recovery are verified.
+- Subsequent coding priority: account IDs/as-of dates and balanced immutable transactions with safe migration; portable backup recovery and storage trust gates; then beginner-first Home/Money/Budget/Activity/Insights UX.
+- Continue to use **fictional data** in debug builds. No release-signed AAB, no security certification, no iPhone/macOS/Linux/Windows build.
