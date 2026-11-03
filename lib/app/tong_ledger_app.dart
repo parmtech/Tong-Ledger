@@ -444,6 +444,7 @@ class _LedgerShellState extends State<LedgerShell> {
   }
 
   void _showActions() {
+    if (_busy || _loading || _loadError != null) return;
     showModalBottomSheet<void>(
       context: context,
       showDragHandle: true,
@@ -451,7 +452,7 @@ class _LedgerShellState extends State<LedgerShell> {
         child: ListView(
           shrinkWrap: true,
           children: [
-            const ListTile(title: Text('Add to Demo Ledger')),
+            ListTile(title: Text(_demo ? 'Add to Demo Ledger' : 'Add to Local Vault')),
             _action(sheetContext, Icons.account_balance, 'Bank / institution', _addBank),
             _action(sheetContext, Icons.account_balance_wallet, 'Cash account', _addAccount),
             _action(sheetContext, Icons.credit_card, 'Credit card', _addCard),
@@ -523,7 +524,7 @@ class _LedgerShellState extends State<LedgerShell> {
         const SizedBox(height: 5),
         const Text('Your financial world, clearly organised.',
           style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-        _heading('Financial overview • Fictional example'),
+        _heading(_demo ? 'Financial overview • Fictional example' : 'Financial overview • Manual records'),
         Wrap(spacing: 8, runSpacing: 8, children: [
           _metric('Cash accounts', snapshot.cashCents, Icons.account_balance_wallet),
           _metric('Credit cards owed', snapshot.creditCardDebtCents, Icons.credit_card),
@@ -552,8 +553,10 @@ class _LedgerShellState extends State<LedgerShell> {
             trailing: Text(Money(entry.amountCents).aud),
           ),
         const SizedBox(height: 15),
-        const Text('Sample balances are fictional. No data is saved or bank-connected.',
-          style: TextStyle(color: Colors.white70)),
+        Text(_demo
+          ? 'All balances are fictional and not saved.'
+          : 'These are manually entered estimates, not live bank balances.',
+          style: const TextStyle(color: Colors.white70)),
       ],
     );
   }
@@ -647,11 +650,11 @@ class _LedgerShellState extends State<LedgerShell> {
             child: const Text('Close'),
           ),
           FilledButton(
-            onPressed: () {
-              setState(() => _activeTemplate = template);
-              Navigator.pop(dialogContext);
+            onPressed: () async {
+              await _commit((book) => book.selectedBudgetTemplateId = template.id);
+              if (dialogContext.mounted) Navigator.pop(dialogContext);
             },
-            child: const Text('Use in demo'),
+            child: Text(_demo ? 'Use in demo' : 'Save plan selection'),
           ),
         ],
       ),
@@ -690,7 +693,7 @@ class _LedgerShellState extends State<LedgerShell> {
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
-        _heading('Insights — demo ledger only'),
+        _heading(_demo ? 'Insights — fictional demo' : 'Insights — locally recorded'),
         _metric('Recorded income', snapshot.incomeCents, Icons.trending_up),
         _metric('Recorded spending', snapshot.expenseCents, Icons.trending_down),
         _metric('Current cash', snapshot.cashCents, Icons.account_balance_wallet),
@@ -716,12 +719,20 @@ class _LedgerShellState extends State<LedgerShell> {
           title: Text('Full Academy'),
           subtitle: Text('Eight lessons planned; full tutorials in GitHub docs'),
         ),
-        _heading('Privacy and security status'),
+        _heading('Local data and demo'),
+        ListTile(
+          leading: const Icon(Icons.swap_horiz, color: _gold),
+          title: Text(_demo ? 'Return to my encrypted vault' : 'Explore fictional demo'),
+          subtitle: Text(_demo
+              ? 'Discard this demo session and reload stored information.'
+              : 'Your saved data is kept unchanged while in demo mode.'),
+          onTap: _demo ? _restore : _enterDemo,
+        ),
         const ListTile(
           leading: Icon(Icons.shield_outlined, color: _gold),
-          title: Text('Prototype: NO encrypted persistence yet'),
-          subtitle: Text('No signup, no bank connection, all changes in memory. '
-              'Do not add real financial information.'),
+          title: Text('Local encryption enabled — beta'),
+          subtitle: Text('No bank connection or cloud sync. Secure backup, '
+              'biometric lock and release security review are still pending.'),
         ),
         const ListTile(
           leading: Icon(Icons.code, color: _gold),
@@ -734,6 +745,32 @@ class _LedgerShellState extends State<LedgerShell> {
 
   @override
   Widget build(BuildContext context) {
+    if (_loading) {
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    }
+    if (_loadError != null) {
+      return Scaffold(
+        appBar: AppBar(title: const Text('Tong Ledger — Vault locked')),
+        body: SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Icon(Icons.lock_outline, size: 48, color: _gold),
+                const SizedBox(height: 16),
+                const Text('Your encrypted records could not be opened. '
+                    'No data has been reset or overwritten.'),
+                const SizedBox(height: 8),
+                SelectableText(_loadError!),
+                const SizedBox(height: 16),
+                FilledButton(onPressed: _restore, child: const Text('Try again')),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
     final snapshot = calculateLedger(_book);
     final pages = [
       _home(snapshot),
@@ -749,8 +786,8 @@ class _LedgerShellState extends State<LedgerShell> {
             style: TextStyle(color: _gold, letterSpacing: 1.1)),
         actions: [
           IconButton(
-            onPressed: _showActions,
-            tooltip: 'Add demo record',
+            onPressed: _busy ? null : _showActions,
+            tooltip: 'Add finance record',
             icon: const Icon(Icons.add_circle_outline, color: _gold),
           ),
         ],
@@ -761,17 +798,19 @@ class _LedgerShellState extends State<LedgerShell> {
             width: double.infinity,
             color: const Color(0xFF493A20),
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            child: const Text('DEMO • NOT SAVED • DO NOT ENTER REAL DATA',
-              style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
+            child: Text(_demo
+              ? 'DEMO • FICTIONAL • NOT SAVED'
+              : 'PRIVATE LOCAL VAULT • BETA • BACKUP NOT READY',
+              style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
           ),
           Expanded(child: pages[_selectedTab]),
         ],
       ),
       floatingActionButton: _selectedTab <= 1
           ? FloatingActionButton.extended(
-              onPressed: _showActions,
+              onPressed: _busy ? null : _showActions,
               icon: const Icon(Icons.add),
-              label: const Text('Add demo record'),
+              label: Text(_busy ? 'Saving...' : 'Add record'),
             )
           : null,
       bottomNavigationBar: NavigationBar(
