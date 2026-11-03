@@ -148,4 +148,4 @@ class FinanceBook {
   final List<IncomeSource> incomeSources;
   final List<LedgerEntry> entries;
   String? selectedBudgetTemplateId;
-
+}
