@@ -82,7 +82,7 @@ class SecureFinanceStore implements FinanceStore {
     } catch (error) {
       throw SecureStorageFailure(
         'Encrypted financial records could not be opened. '
-        'No data was erased or reset. Technical detail: ' + error.toString(),
+        'No data was erased or reset. Technical detail: $error',
       );
     }
   }
@@ -95,14 +95,13 @@ class SecureFinanceStore implements FinanceStore {
     final file = await _file();
     final key = await _getKey(existingFile: await file.exists());
     final envelope = await _cipher.encrypt(plaintext, key);
-    final temporary = File(file.path + '.pending');
+    final temporary = File('${file.path}.pending');
     try {
       await temporary.writeAsString(envelope, flush: true);
       await temporary.rename(file.path);
     } catch (error) {
       throw SecureStorageFailure(
-        'Encrypted save failed; old vault was not intentionally deleted: ' +
-            error.toString(),
+        'Encrypted save failed; old vault was not intentionally deleted: $error',
       );
     }
   }
