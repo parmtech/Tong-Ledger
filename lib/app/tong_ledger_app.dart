@@ -728,29 +728,113 @@ class _LedgerShellState extends State<LedgerShell> {
     await _openBudgetEditor(plan);
   }
 
+  Future<void> _createEmptyBudget() async {
+    final now = DateTime.now();
+    await _openBudgetEditor(BudgetPlan(
+      id: _id(), name: 'My Custom Budget',
+      period: BudgetPeriod.monthly,
+      startDate: DateTime.utc(now.year, now.month, 1),
+      incomeCents: 0,
+      allocations: [
+        const BudgetAllocation(category: 'Essentials', plannedCents: 0),
+      ],
+    ));
+  }
+
+  Future<void> _duplicateBudget(BudgetPlan plan) async {
+    await _commit((book) => book.budgets.add(BudgetPlan(
+      id: _id(),
+      name: 'Copy of ${plan.name}',
+      period: plan.period,
+      startDate: plan.startDate,
+      incomeCents: plan.incomeCents,
+      templateId: plan.templateId,
+      allocations: [
+        for (final a in plan.allocations)
+          BudgetAllocation(category: a.category, plannedCents: a.plannedCents),
+      ],
+    )));
+  }
+
+  Future<void> _deleteBudget(BudgetPlan plan) async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (dialog) => AlertDialog(
+        title: const Text('Delete this budget?'),
+        content: Text('This removes ${plan.name}, not your accounts or transactions.'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(dialog, false),
+              child: const Text('Cancel')),
+          FilledButton(onPressed: () => Navigator.pop(dialog, true),
+              child: const Text('Delete budget')),
+        ],
+      ),
+    );
+    if (ok == true && mounted) {
+      await _commit((book) => book.budgets.removeWhere((b) => b.id == plan.id));
+    }
+  }
+
   Widget _budgetCard(BudgetPlan plan) {
-    final actual = plan.actualSpending(_book.entries, DateTime.now().toUtc());
+    final actual = plan.actualSpending(_book.entries, DateTime.now());
     final spent = actual.values.fold<int>(0, (total, v) => total + v);
     return Card(
       color: _graphite,
-      child: ListTile(
-        leading: const Icon(Icons.edit_note, color: _gold),
+      child: ExpansionTile(
+        leading: const Icon(Icons.donut_large, color: _gold),
         title: Text(plan.name),
-        subtitle: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('${plan.period.name} • ${plan.allocations.length} categories'),
-            Text('Planned ${Money(plan.incomeCents).aud}'
-                 ' • Allocated ${Money(plan.allocatedCents).aud}'),
-            Text('Recorded spending this cycle: ${Money(spent).aud}'),
-            if (plan.isOverallocated)
-              const Text('Overallocated budget',
+        subtitle: Text('${plan.period.name} • Planned ${Money(plan.incomeCents).aud}'
+            ' • Spent ${Money(spent).aud}'),
+        children: [
+          for (final category in plan.allocations)
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 5),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(children: [
+                    Expanded(child: Text(category.category)),
+                    Text('${Money(actual[category.category] ?? 0).aud} / '
+                        '${Money(category.plannedCents).aud}'),
+                  ]),
+                  const SizedBox(height: 5),
+                  LinearProgressIndicator(
+                    value: category.plannedCents == 0
+                        ? 0
+                        : ((actual[category.category] ?? 0) /
+                            category.plannedCents).clamp(0, 1).toDouble(),
+                    color: _gold,
+                  ),
+                ],
+              ),
+            ),
+          if (plan.isOverallocated)
+            const Text('Warning: allocated amount exceeds planned income.',
                 style: TextStyle(color: Colors.orangeAccent)),
-          ],
-        ),
-        isThreeLine: true,
-        trailing: const Icon(Icons.chevron_right),
-        onTap: () => _openBudgetEditor(plan),
+          Padding(
+            padding: const EdgeInsets.all(8),
+            child: Wrap(
+              spacing: 8,
+              children: [
+                TextButton.icon(
+                  onPressed: () => _openBudgetEditor(plan),
+                  icon: const Icon(Icons.edit_outlined),
+                  label: const Text('Edit'),
+                ),
+                TextButton.icon(
+                  onPressed: () => _duplicateBudget(plan),
+                  icon: const Icon(Icons.copy_outlined),
+                  label: const Text('Duplicate'),
+                ),
+                TextButton.icon(
+                  onPressed: () => _deleteBudget(plan),
+                  icon: const Icon(Icons.delete_outline),
+                  label: const Text('Delete'),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -802,6 +886,14 @@ class _LedgerShellState extends State<LedgerShell> {
       padding: const EdgeInsets.all(12),
       children: [
         _heading('My saved budgets'),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 4),
+          child: OutlinedButton.icon(
+            onPressed: _createEmptyBudget,
+            icon: const Icon(Icons.add_circle_outline),
+            label: const Text('Create custom budget'),
+          ),
+        ),
         if (_book.budgets.isEmpty)
           const Padding(
             padding: EdgeInsets.all(8),
