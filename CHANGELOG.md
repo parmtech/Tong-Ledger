@@ -1,5 +1,13 @@
 # Changelog
 
+## Experimental / unmerged — portable recovery prototype (2026-11-04)
+- [Draft PR #7](https://github.com/parmtech/Tong-Ledger/pull/7) adds encrypted user-controlled backup import/export and locked-vault replacement; old PR #6 is closed, unmerged.
+- Added staged device rekey, preservation of old encrypted ciphertext, interrupted recovery tests, foreign-key/journal validation and enforced Android native backup exclusions for CI-generated platform files.
+- Added detailed recovery protocol and 16-scenario Android device QA matrix. No real-device recovery outcome or production security certification yet.
+- **Not in main or in a signed release.** Review CI and device testing before merge.
+
+
+
 ## Unreleased — balanced ledger safety bridge (2026-11-04)
 - Merged [PR #4](https://github.com/parmtech/Tong-Ledger/pull/4) as `ab88997915be62a17c333c8fa48fca96197530bd`.
 - Added independent read-only double-entry projection of all legacy transaction types, separate opening equity, verification of debit/credit equality and account/currency/reference validation.
