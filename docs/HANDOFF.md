@@ -28,3 +28,13 @@ Files: lib/domain/ (models, ledger, template engine), lib/app/, lib/main.dart, t
 
 ## Initial risk list
 Flutter SDK/Android SDK not installed in conversation container; source validation awaits real CI. Encrypted database and native platform shell pending. GitHub Actions runner network/availability not yet verified. Name clearance, app icon rights and store policies pending. These are explicit blockers before publishing.
+
+
+## 2026-11-03 — initial implementation verified by GitHub fetch
+- Source documentation commit: b54b5e856cd90adbf4321e0bcc999e7b286189e8.
+- Flutter domain/main/widget/workflow files are committed on the public main branch; latest loan-linking fix commit: 59dba1f44ca3d1101e4916bb13f1191602a92270.
+- Master blueprint, 30 plan catalogue, 30 matching Dart seed plans, luxury UX docs, tutorial guide, wiki-style home page and security/test/roadmap docs are in the SAME repo.
+- Static GitHub source verification: 30 Dart plans in 6 groups; each sums to exactly 100%.
+- CI: GitHub Actions YAML committed, but no green run was observable through available connected action results. Do not call tests or APK built successfully until verified.
+- Next developer must verify Actions on https://github.com/parmtech/Tong-Ledger/actions, fix compilation/lint/test errors if any, then implement encrypted persistent finance storage and the complete forms.
+- Android is the only current release target. No Windows, macOS, Linux or iOS package claimed.
