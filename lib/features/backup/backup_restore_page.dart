@@ -33,70 +33,67 @@ class _BackupRestorePageState extends State<BackupRestorePage> {
   }
 
   Future<String?> _askPassphrase(bool newPassword) async {
-    final first = TextEditingController();
-    final again = TextEditingController();
-    try {
-      return await showDialog<String>(
-        context: context,
-        builder: (dialog) => AlertDialog(
-          title: Text(newPassword ? 'Choose a backup password' : 'Unlock backup'),
-          content: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(newPassword
-                    ? 'Use at least 12 characters. This password cannot be recovered.'
-                    : 'Enter the password used to encrypt the backup.'),
+    var password = '';
+    var confirmation = '';
+    return showDialog<String>(
+      context: context,
+      builder: (dialog) => AlertDialog(
+        title: Text(newPassword ? 'Choose a backup password' : 'Unlock backup'),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(newPassword
+                  ? 'Use at least 12 characters. This password cannot be recovered.'
+                  : 'Enter the password that protects your backup.'),
+              const SizedBox(height: 12),
+              TextField(
+                onChanged: (value) => password = value,
+                obscureText: true,
+                enableSuggestions: false,
+                autocorrect: false,
+                decoration: const InputDecoration(
+                  labelText: 'Backup password', border: OutlineInputBorder()),
+              ),
+              if (newPassword) ...[
                 const SizedBox(height: 12),
                 TextField(
-                  controller: first,
-                  obscureText: true, enableSuggestions: false, autocorrect: false,
+                  onChanged: (value) => confirmation = value,
+                  obscureText: true,
+                  enableSuggestions: false,
+                  autocorrect: false,
                   decoration: const InputDecoration(
-                    labelText: 'Backup password', border: OutlineInputBorder()),
+                    labelText: 'Repeat password', border: OutlineInputBorder()),
                 ),
-                if (newPassword) ...[
-                  const SizedBox(height: 12),
-                  TextField(
-                    controller: again,
-                    obscureText: true, enableSuggestions: false, autocorrect: false,
-                    decoration: const InputDecoration(
-                      labelText: 'Repeat password', border: OutlineInputBorder()),
-                  ),
-                ],
               ],
-            ),
+            ],
           ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(dialog),
-              child: const Text('Cancel'),
-            ),
-            FilledButton(
-              onPressed: () {
-                if (first.text.runes.length <
-                    PassphraseBackup.minimumPassphraseLength) {
-                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-                    content: Text('Use a password of at least 12 characters.')));
-                  return;
-                }
-                if (newPassword && first.text != again.text) {
-                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-                    content: Text('Passwords do not match.')));
-                  return;
-                }
-                Navigator.pop(dialog, first.text);
-              },
-              child: const Text('Continue'),
-            ),
-          ],
         ),
-      );
-    } finally {
-      first.clear();
-      again.clear();
-      first.dispose();
-      again.dispose();
-    }
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialog),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () {
+              if (password.runes.length <
+                  PassphraseBackup.minimumPassphraseLength) {
+                ScaffoldMessenger.of(dialog).showSnackBar(const SnackBar(
+                  content: Text('Use at least 12 password characters.')));
+                return;
+              }
+              if (newPassword && password != confirmation) {
+                ScaffoldMessenger.of(dialog).showSnackBar(const SnackBar(
+                  content: Text('Passwords do not match.')));
+                return;
+              }
+              Navigator.pop(dialog, password);
+            },
+            child: const Text('Continue'),
+          ),
+        ],
+      ),
+    );
   }
 
   Future<void> _export() async {
@@ -140,15 +137,12 @@ class _BackupRestorePageState extends State<BackupRestorePage> {
         setState(() => _status = 'Restore cancelled. No changes made.');
         return;
       }
-      final summary = 'This backup includes ' +
-          imported.accounts.length.toString() + ' accounts, ' +
-          imported.cards.length.toString() + ' cards, ' +
-          imported.loans.length.toString() + ' loans and ' +
-          imported.entries.length.toString() + ' transactions. ' +
-          (widget.recoveryOnly
-              ? 'Your locked encrypted vault will be preserved as an '
-                  'inaccessible safety copy. Existing records will be replaced.'
-              : 'It will REPLACE current records. Save a separate backup first.');
+      final summary =
+          'This backup includes ${imported.accounts.length} accounts, '
+          '${imported.cards.length} cards, '
+          '${imported.loans.length} loans and '
+          '${imported.entries.length} transactions. '
+          '${widget.recoveryOnly ? "The locked encrypted vault will be preserved as a safety copy. Existing records will be replaced." : "It will REPLACE current records. Save a separate backup first."}';
       final confirm = await showDialog<bool>(
         context: context,
         builder: (dialog) => AlertDialog(
