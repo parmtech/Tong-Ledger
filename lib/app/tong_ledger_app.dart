@@ -979,6 +979,20 @@ class _LedgerShellState extends State<LedgerShell> {
     );
   }
 
+  Future<void> _recoverLockedVault() async {
+    if (_store is! RecoverableFinanceStore) return;
+    final recovered = await Navigator.push<bool>(
+      context,
+      MaterialPageRoute(
+        builder: (_) => BackupRestorePage(
+          store: _store,
+          recoveryOnly: true,
+        ),
+      ),
+    );
+    if (recovered == true && mounted) await _restore();
+  }
+
   Future<void> _openBackups() async {
     if (_busy || _loading || _loadError != null) return;
     if (_demo) {
@@ -1061,7 +1075,22 @@ class _LedgerShellState extends State<LedgerShell> {
                 const SizedBox(height: 8),
                 SelectableText(_loadError!),
                 const SizedBox(height: 16),
-                FilledButton(onPressed: _restore, child: const Text('Try again')),
+                FilledButton(
+                  onPressed: _restore,
+                  child: const Text('Try again'),
+                ),
+                if (_store is RecoverableFinanceStore) ...[
+                  const SizedBox(height: 12),
+                  OutlinedButton.icon(
+                    onPressed: _recoverLockedVault,
+                    icon: const Icon(Icons.restore_outlined),
+                    label: const Text('Recover from encrypted backup'),
+                  ),
+                  const SizedBox(height: 12),
+                  const Text('A separate password and a valid backup file '
+                      'are required. Existing encrypted ciphertext is '
+                      'preserved for recovery review.'),
+                ],
               ],
             ),
           ),
