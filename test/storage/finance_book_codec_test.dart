@@ -1,4 +1,8 @@
+import 'dart:convert';
+
 import 'package:flutter_test/flutter_test.dart';
+import 'package:tong_ledger/domain/budget_plan.dart';
+import 'package:tong_ledger/domain/budget_templates.dart';
 import 'package:tong_ledger/domain/demo_data.dart';
 import 'package:tong_ledger/domain/ledger_engine.dart';
 import 'package:tong_ledger/storage/finance_book_codec.dart';
@@ -39,4 +43,46 @@ void main() {
       throwsA(isA<Exception>()),
     );
   });
+  test('custom budget survives encrypted snapshot codec roundtrip', () {
+    final book = createDemoBook();
+    final plan = BudgetPlan.fromTemplate(
+      id: 'my-budget', template: budgetTemplates[7],
+      incomeCents: 275050, period: BudgetPeriod.fortnightly,
+      startDate: DateTime.utc(2026, 11, 3),
+    );
+    book.budgets.add(plan);
+    final restored = FinanceBookCodec.decode(FinanceBookCodec.encode(book));
+    expect(restored.budgets.single.id, 'my-budget');
+    expect(restored.budgets.single.incomeCents, 275050);
+    expect(restored.budgets.single.period, BudgetPeriod.fortnightly);
+    expect(restored.budgets.single.allocatedCents, 275050);
+  });
+
+  test('old v0.2 snapshot without budgets loads without any data loss', () {
+    final book = createDemoBook();
+    final json = jsonDecode(FinanceBookCodec.encode(book))
+        as Map<String, dynamic>;
+    json.remove('budgets');
+    final restored = FinanceBookCodec.decode(jsonEncode(json));
+    expect(restored.budgets, isEmpty);
+    expect(restored.accounts.length, 3);
+    expect(restored.cards.single.openingOwedCents, 230000);
+  });
+
+  test('invalid saved budget categories fail closed', () {
+    final book = createDemoBook();
+    book.budgets.add(BudgetPlan(
+      id: 'bad', name: 'Bad', period: BudgetPeriod.monthly,
+      startDate: DateTime.utc(2026, 11, 1), incomeCents: 100000,
+      allocations: [
+        const BudgetAllocation(category: 'Food', plannedCents: 12000),
+        const BudgetAllocation(category: 'food', plannedCents: 13000),
+      ],
+    ));
+    expect(
+      () => FinanceBookCodec.decode(FinanceBookCodec.encode(book)),
+      throwsFormatException,
+    );
+  });
+
 }
