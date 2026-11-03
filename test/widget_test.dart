@@ -55,7 +55,7 @@ void main() {
     await tester.tap(find.text('Create custom budget'));
     await tester.pumpAndSettle();
     expect(find.text('Budget Editor'), findsOneWidget);
-    await tester.tap(find.text('Save my budget'));
+    await tester.tap(find.text('Save').last);
     await tester.pumpAndSettle();
     expect(store.saves, 1);
     expect(store.data.budgets, hasLength(1));
