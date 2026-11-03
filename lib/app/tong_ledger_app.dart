@@ -111,7 +111,7 @@ class _LedgerShellState extends State<LedgerShell> {
       // A bad mutation cannot be written or appear in the live UI.
       FinanceBookCodec.decode(FinanceBookCodec.encode(next));
       if (!_demo) await _store.save(next);
-      if (!mounted) return;
+      if (!mounted) return false;
       setState(() {
         _book = next;
         _activeTemplate = budgetTemplates.firstWhere(
