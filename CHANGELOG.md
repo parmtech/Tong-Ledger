@@ -2,7 +2,16 @@
 
 All notable changes to Tong Ledger are tracked here. This project is in pre-release development; do not interpret milestones as signed releases.
 
-## Unreleased — foundation (2026-11-03)
+## Unreleased — encrypted local vault development milestone (2026-11-03)
+
+- Merged [PR #1](https://github.com/parmtech/Tong-Ledger/pull/1) in commit `26ee173377f09837ee9c21397ad1e7fc554fffc3`.
+- Added AES-256-GCM local file storage, OS-protected encryption key, versioned full finance snapshot, atomic save and fail-closed error handling.
+- Added real local manual data entries, account transfers, assets and income-source setup, kept fictional demo separate.
+- Added tests for encryption authentication, schema integrity and widget local-vault behaviour.
+- Passed Flutter analysis, all tests and Android debug APK build on [CI run 41627444476](https://github.com/parmtech/Tong-Ledger/actions/runs/41627444476).
+- Still pre-release, no signed AAB, reliable backup/recovery or device security audit; do not enter private finance data.
+
+## Previous — foundation (2026-11-03)
 
 ### Added
 - Public open-source GitHub repository with Apache 2.0 license and Flutter ignore configuration.
