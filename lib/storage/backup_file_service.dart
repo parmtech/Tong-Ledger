@@ -18,8 +18,7 @@ class BackupFileService {
   /// Returns false when the user cancels the OS save dialog.
   Future<bool> exportBackup(FinanceBook book, String passphrase) async {
     final encrypted = await _codec.create(book, passphrase);
-    final filename = 'tong-ledger-' +
-        DateTime.now().millisecondsSinceEpoch.toString() + '.tlbackup';
+    final filename = 'tong-ledger-${DateTime.now().millisecondsSinceEpoch}.tlbackup';
     final destination = await FilePicker.platform.saveFile(
       dialogTitle: 'Save encrypted Tong Ledger backup',
       fileName: filename,
