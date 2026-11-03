@@ -1,7 +1,7 @@
 name: tong_ledger
 description: Open-source, manual-first finance and budget planner by ParmTech.
 publish_to: none
-version: 0.1.0+1
+version: 0.4.0+4
 
 environment:
   sdk: ">=3.4.0 <4.0.0"
@@ -12,6 +12,7 @@ dependencies:
   cryptography: ^2.7.0
   flutter_secure_storage: ^9.2.4
   path_provider: ^2.1.5
+  file_picker: ^10.3.3
 
 dev_dependencies:
   flutter_test:
