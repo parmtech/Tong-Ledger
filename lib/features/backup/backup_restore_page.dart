@@ -106,7 +106,7 @@ class _BackupRestorePageState extends State<BackupRestorePage> {
       _status = null;
     });
     try {
-      final saved = await _files.export(widget.book, password);
+      final saved = await _files.exportBackup(widget.book, password);
       if (!mounted) return;
       setState(() => _status = saved
           ? 'Encrypted backup saved. Store its password separately.'
@@ -130,7 +130,7 @@ class _BackupRestorePageState extends State<BackupRestorePage> {
     });
     try {
       // Fully authenticate + validate before any vault write.
-      final imported = await _files.import(password);
+      final imported = await _files.importBackup(password);
       if (!mounted) return;
       if (imported == null) {
         setState(() => _status = 'Restore cancelled. No changes made.');
