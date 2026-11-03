@@ -64,4 +64,32 @@ void main() {
       throwsA(isA<Exception>()),
     );
   });
+  test('nonsensical negative assets, credit limits and loan amounts fail', () {
+    final invalid = [
+      FinanceBook(assets: [
+        AssetRecord(
+          id: 'car', name: 'Car',
+          valuationCents: -500, asOf: DateTime.utc(2026, 11, 4),
+        ),
+      ]),
+      FinanceBook(cards: [
+        const CreditCardAccount(id: 'card', name: 'Card',
+          limitCents: -2500, openingOwedCents: 1000),
+      ]),
+      FinanceBook(loans: [
+        const LoanAccount(id: 'loan', name: 'Personal',
+          lenderName: 'Friend', openingOutstandingCents: -1000),
+      ]),
+      FinanceBook(incomeSources: [
+        const IncomeSource(id: 'income', name: 'Job',
+          cadence: 'weekly', expectedCents: -2500),
+      ]),
+    ];
+    for (final record in invalid) {
+      expect(() => BackupIntegrityValidator.validate(record),
+          throwsFormatException);
+    }
+  });
+
+
 }
