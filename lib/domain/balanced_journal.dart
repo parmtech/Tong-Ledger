@@ -14,7 +14,7 @@ class JournalIntegrityException implements Exception {
   final String message;
 
   @override
-  String toString() => 'Journal integrity: ' + message;
+  String toString() => 'Journal integrity: $message';
 }
 
 class JournalAccount {
@@ -144,13 +144,13 @@ class BalancedJournal {
     final b = balances;
     return JournalBalances(
       cashAccounts: Map.unmodifiable({
-        for (final a in book.accounts) a.id: b['cash:' + a.id]!,
+        for (final a in book.accounts) a.id: b['cash:${a.id}']!,
       }),
       cardsOwed: Map.unmodifiable({
-        for (final a in book.cards) a.id: b['card:' + a.id]!,
+        for (final a in book.cards) a.id: b['card:${a.id}']!,
       }),
       loansOwed: Map.unmodifiable({
-        for (final a in book.loans) a.id: b['loan:' + a.id]!,
+        for (final a in book.loans) a.id: b['loan:${a.id}']!,
       }),
       incomeCents: b['income:posted']!,
       expenseCents: b['expense:posted']!,
@@ -186,7 +186,7 @@ class BalancedJournal {
       final side = debitNormal == increaseNormal
           ? JournalSide.debit : JournalSide.credit;
       batches.add(JournalBatch(
-        id: 'opening/' + identifier,
+        id: 'opening/$identifier',
         at: DateTime.utc(1970),
         postings: [
           JournalPosting(accountId: key, side: side,
@@ -209,17 +209,17 @@ class BalancedJournal {
     }
 
     for (final a in book.accounts) {
-      final key = 'cash:' + a.id;
+      final key = 'cash:${a.id}';
       register(key, JournalAccountType.cashAsset);
       opening(key, a.openingCents, true, key);
     }
     for (final card in book.cards) {
-      final key = 'card:' + card.id;
+      final key = 'card:${card.id}';
       register(key, JournalAccountType.cardLiability);
       opening(key, card.openingOwedCents, false, key);
     }
     for (final loan in book.loans) {
-      final key = 'loan:' + loan.id;
+      final key = 'loan:${loan.id}';
       register(key, JournalAccountType.loanLiability);
       opening(key, loan.openingOutstandingCents, false, key);
     }
@@ -247,22 +247,22 @@ class BalancedJournal {
       }
       final p = <JournalPosting>[];
       String cashSource() {
-        final key = 'cash:' + (entry.sourceAccountId ?? '');
+        final key = 'cash:${entry.sourceAccountId ?? ''}';
         require(key);
         return key;
       }
       String cashDestination() {
-        final key = 'cash:' + (entry.destinationAccountId ?? '');
+        final key = 'cash:${entry.destinationAccountId ?? ''}';
         require(key);
         return key;
       }
       String card() {
-        final key = 'card:' + (entry.cardId ?? '');
+        final key = 'card:${entry.cardId ?? ''}';
         require(key);
         return key;
       }
       String loan() {
-        final key = 'loan:' + (entry.loanId ?? '');
+        final key = 'loan:${entry.loanId ?? ''}';
         require(key);
         return key;
       }
@@ -309,7 +309,7 @@ class BalancedJournal {
           p.add(credit('expense:posted', amount));
       }
       batches.add(JournalBatch(
-        id: 'transaction/' + entry.id,
+        id: 'transaction/${entry.id}',
         at: entry.at, category: entry.category, postings: p,
       ));
     }
