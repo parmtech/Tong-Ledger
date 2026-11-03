@@ -41,6 +41,8 @@
 | [Roadmap](docs/ROADMAP.md) | Android-first milestones and cross-platform follow-up |
 | [Developer handoff](docs/HANDOFF.md) | Current status, blockers, future contributor instructions |
 
+**Security note:** The Android platform directory is generated for CI and local development. Until platform sources are committed, **always run `python3 scripts/prepare_android.py` after `flutter create`**; it adds native Auto Backup and transfer exclusions for the non-portable device-vault key. Those exclusions reduce risk but do not replace recovery testing. The backup/restore feature is experimental; do not store important financial data in debug builds.
+
 ## Planned technology
 Flutter / Dart, a clean domain module, fixed-point integer money, offline-first encrypted persistent store (not yet implemented), Material 3 with custom navy-and-champagne design, and GitHub Actions. The first code milestone contains domain calculations, example UI and tests; it must not be described as production-complete.
 
@@ -48,6 +50,7 @@ Flutter / Dart, a clean domain module, fixed-point integer money, offline-first 
 
 ~~~sh
 flutter create --platforms=android --org au.parmtech --project-name tong_ledger .
+python3 scripts/prepare_android.py  # Required: block keyless Android data backup/transfer
 flutter pub get
 flutter analyze
 flutter test
