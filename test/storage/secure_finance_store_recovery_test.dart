@@ -5,6 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:tong_ledger/domain/demo_data.dart';
 import 'package:tong_ledger/domain/finance_models.dart';
 import 'package:tong_ledger/storage/encrypted_document.dart';
+import 'package:tong_ledger/storage/passphrase_backup.dart';
 import 'package:tong_ledger/storage/secure_finance_store.dart';
 import 'package:tong_ledger/storage/vault_key_access.dart';
 
@@ -157,6 +158,39 @@ void main() {
     expect(await File('${vault().path}.recovery.pending').exists(), false);
     await store.save(loaded);
   });
+
+
+  test('end-to-end encrypted portable backup recovers a locked vault',
+      () async {
+    const secret = 'fictional-test-password-at-least-12';
+    final portableCodec = PassphraseBackup();
+    final exported = await portableCodec.create(createDemoBook(), secret);
+
+    await store.save(FinanceBook(accounts: [
+      const CashAccount(id: 'old', name: 'Unrelated old data',
+        openingCents: 8888),
+    ]));
+    final oldEncrypted = await vault().readAsString();
+    keys.slots.remove('tong_ledger_snapshot_key_v1');
+
+    await expectLater(
+      portableCodec.open(exported, 'definitely-incorrect-test-password'),
+      throwsFormatException,
+    );
+    expect(await vault().readAsString(), oldEncrypted);
+
+    final authenticated = await portableCodec.open(exported, secret);
+    await store.restoreVerifiedBackup(authenticated);
+    final result = await store.load();
+    expect(result.accounts.length, createDemoBook().accounts.length);
+    expect(result.institutions.single.name, 'Commonwealth Bank');
+
+    final copies = await directory.list().where(
+      (entry) => entry.path.contains('.preserved-'),
+    ).toList();
+    expect(copies, hasLength(1));
+    expect(await File(copies.single.path).readAsString(), oldEncrypted);
+  }, timeout: const Timeout(Duration(minutes: 2)));
 
 
 }
