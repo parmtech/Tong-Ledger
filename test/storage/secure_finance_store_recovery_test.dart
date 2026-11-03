@@ -136,4 +136,27 @@ void main() {
       throwsA(isA<SecureStorageFailure>()));
     expect(await vault().readAsString(), before);
   });
+  test('uncommitted recovery candidate rolls back without losing old vault',
+      () async {
+    final old = createDemoBook();
+    await store.save(old);
+    final oldCiphertext = await vault().readAsString();
+    // Simulates a process crash after installing the recovery marker, but
+    // BEFORE the replacement ciphertext has been activated.
+    keys.slots['tong_ledger_recovery_key_v1'] =
+        base64Encode(List<int>.filled(32, 17));
+    await File('${vault().path}.recovery.pending')
+        .writeAsString('uncommitted-candidate', flush: true);
+    await File('${vault().path}.recovery-in-progress')
+        .writeAsString('recovery-in-progress', flush: true);
+    final loaded = await store.load();
+    expect(loaded.institutions.length, old.institutions.length);
+    expect(await vault().readAsString(), oldCiphertext);
+    expect(keys.slots['tong_ledger_recovery_key_v1'], isNull);
+    expect(await File('${vault().path}.recovery-in-progress').exists(), false);
+    expect(await File('${vault().path}.recovery.pending').exists(), false);
+    await store.save(loaded);
+  });
+
+
 }
