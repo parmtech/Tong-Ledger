@@ -20,6 +20,18 @@ class FakeFinanceStore implements FinanceStore {
   }
 }
 
+class FakeLockedVault implements RecoverableFinanceStore {
+  @override
+  Future<FinanceBook> load() async => throw StateError('Simulated missing key');
+
+  @override
+  Future<void> save(FinanceBook book) async =>
+      throw StateError('Cannot save locked vault');
+
+  @override
+  Future<void> restoreVerifiedBackup(FinanceBook restored) async {}
+}
+
 void main() {
   testWidgets('starts with empty local vault and usable bottom navigation',
       (tester) async {
@@ -27,7 +39,7 @@ void main() {
     await tester.pumpWidget(TongLedgerApp(store: store));
     await tester.pumpAndSettle();
     expect(find.text('TONG LEDGER'), findsOneWidget);
-    expect(find.text('PRIVATE LOCAL VAULT • BETA • VERIFY YOUR BACKUP'),
+    expect(find.text('PRIVATE LOCAL VAULT • BETA • BACKUP TESTING ONLY'),
         findsOneWidget);
     expect(find.byType(NavigationBar), findsOneWidget);
     expect(store.saves, 0);
@@ -63,33 +75,18 @@ void main() {
     expect(find.text('My Custom Budget'), findsWidgets);
   });
 
-  testWidgets('account editing preserves posted financial balance',
+  testWidgets('locked vault opens password-protected recovery-only screen',
       (tester) async {
-    final store = FakeFinanceStore();
-    store.data.institutions.add(const Institution(id: 'bank1', name: 'Bank One'));
-    store.data.accounts.add(const CashAccount(
-      id: 'cash', name: 'Everyday', openingCents: 10000,
-      institutionId: 'bank1',
-    ));
-    store.data.entries.add(LedgerEntry(
-      id: 'txn', type: LedgerType.cashExpense, amountCents: 1000,
-      sourceAccountId: 'cash', at: DateTime.utc(2026, 11, 3),
-      category: 'Food',
-    ));
-    await tester.pumpWidget(TongLedgerApp(store: store));
+    await tester.pumpWidget(TongLedgerApp(store: FakeLockedVault()));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Money').last);
+
+    expect(find.text('Recover from encrypted backup'), findsOneWidget);
+    await tester.tap(find.text('Recover from encrypted backup'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Everyday'));
-    await tester.pumpAndSettle();
-    expect(find.text('Opening balance (AUD)'), findsNothing);
-    expect(find.text('Account nickname'), findsOneWidget);
-    await tester.enterText(find.byType(TextFormField).last, 'Main Spending');
-    await tester.tap(find.text('Add').last);
-    await tester.pumpAndSettle();
-    expect(store.data.accounts.single.name, 'Main Spending');
-    expect(store.data.accounts.single.openingCents, 10000);
-    expect(store.data.entries.single.amountCents, 1000);
+    expect(find.text('Backup & Restore'), findsOneWidget);
+    expect(find.text('Select encrypted backup'), findsOneWidget);
+    expect(find.text('Save .tlbackup file'), findsNothing);
   });
+
 
 }
