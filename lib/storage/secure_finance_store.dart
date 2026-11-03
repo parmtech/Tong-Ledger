@@ -7,6 +7,7 @@ import 'package:path_provider/path_provider.dart';
 
 import '../domain/finance_models.dart';
 import 'encrypted_document.dart';
+import 'finance_store.dart';
 import 'finance_book_codec.dart';
 
 class SecureStorageFailure implements Exception {
@@ -21,7 +22,7 @@ class SecureStorageFailure implements Exception {
 ///
 /// Save uses same-directory temporary file + atomic rename on Android/Linux.
 /// If ciphertext is corrupt or a key is missing we throw and NEVER reset data.
-class SecureFinanceStore {
+class SecureFinanceStore implements FinanceStore {
   SecureFinanceStore({
     FlutterSecureStorage? secureStorage,
     Future<Directory> Function()? supportDirectory,
@@ -69,6 +70,7 @@ class SecureFinanceStore {
     return key;
   }
 
+  @override
   Future<FinanceBook> load() async {
     final file = await _file();
     if (!await file.exists()) return FinanceBook();
@@ -85,6 +87,7 @@ class SecureFinanceStore {
     }
   }
 
+  @override
   Future<void> save(FinanceBook book) async {
     final plaintext = FinanceBookCodec.encode(book);
     // Validate before touching the file.
