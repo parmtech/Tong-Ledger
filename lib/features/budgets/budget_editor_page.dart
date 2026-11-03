@@ -50,7 +50,7 @@ class _BudgetEditorPageState extends State<BudgetEditorPage> {
     _rows = [
       for (final a in plan.allocations)
         _newRow(a.category, Money(a.plannedCents).aud
-            .replaceAll(r'A.replaceAll(',', '')),
+            .replaceAll(r'A$', '').replaceAll(',', '')),
     ];
     _income.addListener(_refresh);
   }
