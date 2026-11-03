@@ -1028,7 +1028,7 @@ class _LedgerShellState extends State<LedgerShell> {
         const ListTile(
           leading: Icon(Icons.shield_outlined, color: _gold),
           title: Text('Local encryption enabled — beta'),
-          subtitle: Text('No bank connection or cloud sync. Secure backup, '
+          subtitle: Text('No bank connection or cloud sync. Backup export/import is beta; '
               'biometric lock and release security review are still pending.'),
         ),
         const ListTile(
@@ -1097,7 +1097,7 @@ class _LedgerShellState extends State<LedgerShell> {
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
             child: Text(_demo
               ? 'DEMO • FICTIONAL • NOT SAVED'
-              : 'PRIVATE LOCAL VAULT • BETA • BACKUP NOT READY',
+              : 'PRIVATE LOCAL VAULT • BETA • VERIFY YOUR BACKUP',
               style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
           ),
           Expanded(child: pages[_selectedTab]),
@@ -1889,7 +1889,7 @@ class _LedgerShellState extends State<LedgerShell> {
         const ListTile(
           leading: Icon(Icons.shield_outlined, color: _gold),
           title: Text('Local encryption enabled — beta'),
-          subtitle: Text('No bank connection or cloud sync. Secure backup, '
+          subtitle: Text('No bank connection or cloud sync. Backup export/import is beta; '
               'biometric lock and release security review are still pending.'),
         ),
         const ListTile(
@@ -1958,7 +1958,7 @@ class _LedgerShellState extends State<LedgerShell> {
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
             child: Text(_demo
               ? 'DEMO • FICTIONAL • NOT SAVED'
-              : 'PRIVATE LOCAL VAULT • BETA • BACKUP NOT READY',
+              : 'PRIVATE LOCAL VAULT • BETA • VERIFY YOUR BACKUP',
               style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
           ),
           Expanded(child: pages[_selectedTab]),
