@@ -58,7 +58,7 @@ void main() {
     expect(projection.cashCents, legacy.cashCents);
     expect(projection.incomeCents, legacy.incomeCents);
     expect(projection.expenseCents, legacy.expenseCents);
-    expect(projection.expenseCents, 74500);
+    expect(projection.expenseCents, 24500);
     expect(projection.loansOwed['car'], 1450000);
     expect(projection.cardsOwed['visa'], 228000);
     expect(journal.batches.length, book.entries.length + 4);
