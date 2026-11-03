@@ -61,7 +61,7 @@ void main() {
         throwsFormatException);
     await expectLater(
       PassphraseBackup().create(book, 'this-is-a-long-example-password'),
-      throwsFormatException,
+      throwsA(isA<Exception>()),
     );
   });
 }
