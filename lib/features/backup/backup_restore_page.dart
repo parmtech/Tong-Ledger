@@ -8,9 +8,11 @@ import '../../storage/passphrase_backup.dart';
 /// User-initiated export/restore; never submits financial data to a server.
 class BackupRestorePage extends StatefulWidget {
   const BackupRestorePage({
-    super.key, required this.book, required this.store, this.files,
+    super.key, this.book, required this.store, this.files,
+    this.recoveryOnly = false,
   });
-  final FinanceBook book;
+  final FinanceBook? book;
+  final bool recoveryOnly;
   final FinanceStore store;
   final BackupFileService? files;
 
@@ -99,6 +101,8 @@ class _BackupRestorePageState extends State<BackupRestorePage> {
 
   Future<void> _export() async {
     if (_busy) return;
+    final book = widget.book;
+    if (widget.recoveryOnly || book == null) return;
     final password = await _askPassphrase(true);
     if (password == null || !mounted) return;
     setState(() {
@@ -106,7 +110,7 @@ class _BackupRestorePageState extends State<BackupRestorePage> {
       _status = null;
     });
     try {
-      final saved = await _files.exportBackup(widget.book, password);
+      final saved = await _files.exportBackup(book, password);
       if (!mounted) return;
       setState(() => _status = saved
           ? 'Encrypted backup saved. Store its password separately.'
@@ -140,8 +144,11 @@ class _BackupRestorePageState extends State<BackupRestorePage> {
           imported.accounts.length.toString() + ' accounts, ' +
           imported.cards.length.toString() + ' cards, ' +
           imported.loans.length.toString() + ' loans and ' +
-          imported.entries.length.toString() + ' transactions. '
-          'It will REPLACE all current records. Save a separate backup first.';
+          imported.entries.length.toString() + ' transactions. ' +
+          (widget.recoveryOnly
+              ? 'Your locked encrypted vault will be preserved as an '
+                  'inaccessible safety copy. Existing records will be replaced.'
+              : 'It will REPLACE current records. Save a separate backup first.');
       final confirm = await showDialog<bool>(
         context: context,
         builder: (dialog) => AlertDialog(
@@ -163,7 +170,14 @@ class _BackupRestorePageState extends State<BackupRestorePage> {
         if (mounted) setState(() => _status = 'Restore cancelled.');
         return;
       }
-      await widget.store.save(imported);
+      if (widget.store is RecoverableFinanceStore) {
+        await (widget.store as RecoverableFinanceStore)
+            .restoreVerifiedBackup(imported);
+      } else if (!widget.recoveryOnly) {
+        await widget.store.save(imported);
+      } else {
+        throw const FormatException('This store cannot recover a locked vault.');
+      }
       if (mounted) Navigator.pop(context, true);
     } catch (_) {
       if (mounted) {
@@ -190,7 +204,7 @@ class _BackupRestorePageState extends State<BackupRestorePage> {
           const Text('Portable, password-encrypted backup files. '
               'No automatic cloud upload or bank connection.'),
           const SizedBox(height: 18),
-          Card(
+          if (!widget.recoveryOnly) Card(
             child: Padding(
               padding: const EdgeInsets.all(16),
               child: Column(children: [
@@ -227,9 +241,10 @@ class _BackupRestorePageState extends State<BackupRestorePage> {
             ),
           ),
           const SizedBox(height: 10),
-          const Text('Beta limitation: device key invalidation, '
-              'interrupted writes and actual-device recovery need testing. '
-              'Do not use real financial data yet.'),
+          const Text('Beta limitation: interrupted writes, device key '
+              'invalidation and cross-device restore still need testing. '
+              'Preserved ciphertext does not guarantee the old key works. '
+              'Use fictional data only.'),
           if (_busy) ...[
             const SizedBox(height: 15),
             const Center(child: CircularProgressIndicator()),
