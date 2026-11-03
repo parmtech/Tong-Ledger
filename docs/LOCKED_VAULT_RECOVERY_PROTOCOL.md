@@ -29,6 +29,13 @@ The earlier `BackupRestorePage` was only reachable after `SecureFinanceStore.loa
 - `test/storage/secure_finance_store_recovery_test.dart`: interrupted recovery, key invalidation simulation, preservation and no-empty-reset regression tests.
 - Existing `test/storage/passphrase_backup_test.dart` tests authenticated backup roundtrips and tampering.
 
+## Additional safeguards in the clean PR
+
+- `lib/storage/backup_integrity_validator.dart` checks orphaned bank/issuer/loan references, income destinations and consistency of the balanced shadow journal **before** importing an untrusted backup.
+- `scripts/prepare_android.py` enforces `android:allowBackup="false"`, legacy full-backup exclusions and modern Android data-extraction/device-transfer exclusions in Flutter's generated Android manifest. CI runs this after `flutter create` and before `flutter build apk`; local developers must do the same.
+- `test/storage/backup_integrity_validator_test.dart` exercises corrupt relationships and invalid transaction projections; the locked-vault widget test confirms restore is accessible without an unlocked device key.
+- [Device QA matrix](RECOVERY_DEVICE_TEST_MATRIX.md) lists 16 required checks, all **pending** actual device evidence. A green Flutter test suite is not evidence of new-device recovery.
+
 ## Risks and next release gates
 
 - This is still **single encrypted JSON snapshot storage**, not a transactional database/journal. Power-loss after hardware flush, Android path rename behaviour and KDF runtime on real devices are **not established by Flutter unit tests**.
