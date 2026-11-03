@@ -5,6 +5,7 @@ import 'package:cryptography/cryptography.dart';
 
 import '../domain/finance_models.dart';
 import 'finance_book_codec.dart';
+import 'backup_integrity_validator.dart';
 
 /// A portable encrypted backup independent of the Android Keystore.
 ///
@@ -33,6 +34,7 @@ class PassphraseBackup {
     _checkPassphrase(passphrase);
     final plaintext = FinanceBookCodec.encode(book);
     FinanceBookCodec.decode(plaintext);
+    BackupIntegrityValidator.validate(book);
     final random = Random.secure();
     final salt = List<int>.generate(16, (_) => random.nextInt(256));
     final nonce = _aes.newNonce();
@@ -106,7 +108,9 @@ class PassphraseBackup {
         secretKey: key,
         aad: utf8.encode(_aad),
       );
-      return FinanceBookCodec.decode(utf8.decode(plaintext));
+      final restored = FinanceBookCodec.decode(utf8.decode(plaintext));
+      BackupIntegrityValidator.validate(restored);
+      return restored;
     } on SecretBoxAuthenticationError {
       throw const FormatException(
         'Incorrect password or a modified/corrupted backup file.',
