@@ -5,14 +5,19 @@ import '../domain/demo_data.dart';
 import '../domain/finance_models.dart';
 import '../domain/ledger_engine.dart';
 import '../domain/money.dart';
+import '../storage/finance_book_codec.dart';
+import '../storage/finance_store.dart';
+import '../storage/secure_finance_store.dart';
 
 const _navy = Color(0xFF0C1117);
 const _graphite = Color(0xFF1B2633);
 const _gold = Color(0xFFC8AE7D);
 
-/// This UI is a developer preview; ALL balances are fictional and unsaved.
+/// Early encrypted-local-data prototype; not a production-ready release.
 class TongLedgerApp extends StatelessWidget {
-  const TongLedgerApp({super.key});
+  const TongLedgerApp({super.key, this.store});
+
+  final FinanceStore? store;
 
   @override
   Widget build(BuildContext context) {
@@ -28,23 +33,100 @@ class TongLedgerApp extends StatelessWidget {
           brightness: Brightness.dark,
         ),
       ),
-      home: const LedgerShell(),
+      home: LedgerShell(store: store),
     );
   }
 }
 
 class LedgerShell extends StatefulWidget {
-  const LedgerShell({super.key});
+  const LedgerShell({super.key, this.store});
+
+  final FinanceStore? store;
 
   @override
   State<LedgerShell> createState() => _LedgerShellState();
 }
 
 class _LedgerShellState extends State<LedgerShell> {
-  final FinanceBook _book = createDemoBook();
+  FinanceBook _book = FinanceBook();
+  late final FinanceStore _store;
+  bool _loading = true;
+  bool _demo = false;
+  bool _busy = false;
+  String? _loadError;
   int _selectedTab = 0;
   int _serial = 0;
   BudgetTemplate _activeTemplate = budgetTemplates[7];
+
+  @override
+  void initState() {
+    super.initState();
+    _store = widget.store ?? SecureFinanceStore();
+    _restore();
+  }
+
+  Future<void> _restore() async {
+    setState(() {
+      _loading = true;
+      _loadError = null;
+    });
+    try {
+      final restored = await _store.load();
+      if (!mounted) return;
+      setState(() {
+        _book = restored;
+        _demo = false;
+        _activeTemplate = budgetTemplates.firstWhere(
+          (t) => t.id == restored.selectedBudgetTemplateId,
+          orElse: () => budgetTemplates[7],
+        );
+        _loading = false;
+      });
+    } catch (error) {
+      if (!mounted) return;
+      setState(() {
+        _loadError = error.toString();
+        _loading = false;
+      });
+    }
+  }
+
+  void _enterDemo() {
+    setState(() {
+      _book = createDemoBook();
+      _activeTemplate = budgetTemplates[7];
+      _demo = true;
+      _selectedTab = 0;
+    });
+  }
+
+  Future<void> _commit(void Function(FinanceBook) edit) async {
+    if (_busy || _loading || _loadError != null) return;
+    setState(() => _busy = true);
+    try {
+      final next = FinanceBookCodec.decode(FinanceBookCodec.encode(_book));
+      edit(next);
+      // A bad mutation cannot be written or appear in the live UI.
+      FinanceBookCodec.decode(FinanceBookCodec.encode(next));
+      if (!_demo) await _store.save(next);
+      if (!mounted) return;
+      setState(() {
+        _book = next;
+        _activeTemplate = budgetTemplates.firstWhere(
+          (t) => t.id == next.selectedBudgetTemplateId,
+          orElse: () => budgetTemplates[7],
+        );
+      });
+      _message(_demo
+          ? 'Demo-only change; not saved.'
+          : 'Saved in your encrypted local vault.');
+    } catch (error) {
+      _message('Could not save. Existing data was preserved: ' +
+          error.toString());
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
 
   String _id() {
     _serial++;
