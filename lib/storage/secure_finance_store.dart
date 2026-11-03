@@ -8,6 +8,7 @@ import 'package:path_provider/path_provider.dart';
 import '../domain/finance_models.dart';
 import 'encrypted_document.dart';
 import 'finance_book_codec.dart';
+import 'backup_integrity_validator.dart';
 import 'finance_store.dart';
 import 'vault_key_access.dart';
 
@@ -185,6 +186,7 @@ class SecureFinanceStore implements RecoverableFinanceStore {
       _exclusive(() async {
     final json = FinanceBookCodec.encode(restored);
     FinanceBookCodec.decode(json);
+    BackupIntegrityValidator.validate(restored);
     final file = await _file();
     final candidate = _candidate(file);
     final marker = _marker(file);
