@@ -146,10 +146,10 @@ class _LedgerShellState extends State<LedgerShell> {
     String title,
     List<(String, String)> fields,
   ) async {
-    final controllers = <String, TextEditingController>{
-      for (final field in fields) field.$1: TextEditingController(),
+    final values = <String, String>{
+      for (final field in fields) field.$1: '',
     };
-    final response = await showDialog<Map<String, String>>(
+    return showDialog<Map<String, String>>(
       context: context,
       builder: (dialogContext) => AlertDialog(
         title: Text(title),
@@ -162,8 +162,14 @@ class _LedgerShellState extends State<LedgerShell> {
                 for (final field in fields)
                   Padding(
                     padding: const EdgeInsets.symmetric(vertical: 5),
-                    child: TextField(
-                      controller: controllers[field.$1],
+                    child: TextFormField(
+                      onChanged: (value) => values[field.$1] = value.trim(),
+                      keyboardType: [
+                        'amount', 'opening', 'limit', 'owed',
+                        'outstanding', 'instalment', 'interest',
+                      ].contains(field.$1)
+                          ? const TextInputType.numberWithOptions(decimal: true)
+                          : TextInputType.text,
                       decoration: InputDecoration(
                         labelText: field.$2,
                         border: const OutlineInputBorder(),
@@ -171,7 +177,9 @@ class _LedgerShellState extends State<LedgerShell> {
                     ),
                   ),
                 const SizedBox(height: 8),
-                const Text('DEMO ONLY — changes disappear after app restart.'),
+                Text(_demo
+                    ? 'Demo mode: changes will NOT be saved.'
+                    : 'Saved only in this device\'s encrypted vault.'),
               ],
             ),
           ),
@@ -182,19 +190,12 @@ class _LedgerShellState extends State<LedgerShell> {
             child: const Text('Cancel'),
           ),
           FilledButton(
-            onPressed: () => Navigator.pop(dialogContext, {
-              for (final field in fields)
-                field.$1: controllers[field.$1]!.text.trim(),
-            }),
+            onPressed: () => Navigator.pop(dialogContext, {...values}),
             child: const Text('Add'),
           ),
         ],
       ),
     );
-    for (final controller in controllers.values) {
-      controller.dispose();
-    }
-    return response;
   }
 
   Future<T?> _choose<T>(
@@ -238,16 +239,8 @@ class _LedgerShellState extends State<LedgerShell> {
     return money.cents;
   }
 
-  void _post(LedgerEntry entry) {
-    _book.entries.add(entry);
-    try {
-      calculateLedger(_book);
-      setState(() {});
-      _message('Demo transaction recorded (not saved).');
-    } on LedgerException catch (error) {
-      _book.entries.removeLast();
-      _message(error.message);
-    }
+  Future<void> _post(LedgerEntry entry) async {
+    await _commit((book) => book.entries.add(entry));
   }
 
   Future<void> _addBank() async {
@@ -258,7 +251,7 @@ class _LedgerShellState extends State<LedgerShell> {
       _message('A name is required.');
       return;
     }
-    setState(() => _book.institutions.add(Institution(id: _id(), name: name)));
+    await _commit((book) => book.institutions.add(Institution(id: _id(), name: name)));
   }
 
   Future<void> _addAccount() async {
@@ -277,7 +270,7 @@ class _LedgerShellState extends State<LedgerShell> {
       _message('Name required.');
       return;
     }
-    setState(() => _book.accounts.add(CashAccount(
+    await _commit((book) => book.accounts.add(CashAccount(
       id: _id(),
       name: fields['name']!,
       institutionId: bank.id,
@@ -303,7 +296,7 @@ class _LedgerShellState extends State<LedgerShell> {
       _message('Name required.');
       return;
     }
-    setState(() => _book.cards.add(CreditCardAccount(
+    await _commit((book) => book.cards.add(CreditCardAccount(
       id: _id(),
       name: fields['name']!,
       limitCents: limit,
@@ -337,7 +330,7 @@ class _LedgerShellState extends State<LedgerShell> {
       _message('Existing bank not found; leave blank for a private lender.');
       return;
     }
-    setState(() => _book.loans.add(LoanAccount(
+    await _commit((book) => book.loans.add(LoanAccount(
       id: _id(),
       institutionId: bankMatches.isEmpty ? null : bankMatches.first.id,
       name: fields['name']!,
@@ -359,7 +352,7 @@ class _LedgerShellState extends State<LedgerShell> {
     if (!mounted || fields == null) return;
     final amount = _cents(fields, 'amount');
     if (amount == null) return;
-    _post(LedgerEntry(
+    await _post(LedgerEntry(
       id: _id(), type: LedgerType.cashExpense,
       amountCents: amount, sourceAccountId: account.id,
       category: fields['category'], at: DateTime.now().toUtc(),
@@ -378,7 +371,7 @@ class _LedgerShellState extends State<LedgerShell> {
     if (!mounted || fields == null) return;
     final amount = _cents(fields, 'amount');
     if (amount == null) return;
-    _post(LedgerEntry(
+    await _post(LedgerEntry(
       id: _id(), type: LedgerType.income,
       amountCents: amount, destinationAccountId: account.id,
       category: fields['category'], at: DateTime.now().toUtc(),
@@ -397,7 +390,7 @@ class _LedgerShellState extends State<LedgerShell> {
     if (!mounted || fields == null) return;
     final amount = _cents(fields, 'amount');
     if (amount == null) return;
-    _post(LedgerEntry(
+    await _post(LedgerEntry(
       id: _id(), type: LedgerType.cardPurchase,
       cardId: card.id, amountCents: amount,
       category: fields['category'], at: DateTime.now().toUtc(),
@@ -419,7 +412,7 @@ class _LedgerShellState extends State<LedgerShell> {
     if (!mounted || fields == null) return;
     final amount = _cents(fields, 'amount');
     if (amount == null) return;
-    _post(LedgerEntry(
+    await _post(LedgerEntry(
       id: _id(), type: LedgerType.cardPayment, amountCents: amount,
       sourceAccountId: account.id, cardId: card.id,
       at: DateTime.now().toUtc(),
@@ -443,7 +436,7 @@ class _LedgerShellState extends State<LedgerShell> {
     final amount = _cents(fields, 'amount');
     final interest = _cents(fields, 'interest', zeroOk: true);
     if (amount == null || interest == null) return;
-    _post(LedgerEntry(
+    await _post(LedgerEntry(
       id: _id(), type: LedgerType.loanPayment, amountCents: amount,
       interestCents: interest, sourceAccountId: account.id,
       loanId: loan.id, at: DateTime.now().toUtc(),
