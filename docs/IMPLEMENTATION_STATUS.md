@@ -1,30 +1,39 @@
 # Tong Ledger — Implementation Status
 
-**Updated:** 2026-11-03 · **Development milestone v0.2 foundation on main**  
-**Merged:** [PR #1](https://github.com/parmtech/Tong-Ledger/pull/1), squash commit `26ee173377f09837ee9c21397ad1e7fc554fffc3`  
-**Verified:** [GitHub Actions run #41627444476](https://github.com/parmtech/Tong-Ledger/actions/runs/41627444476) — analyse, unit/widget tests, Android debug build, and artifact upload all **successful**. The debug APK artifact expires 2026-11-17.
+**Updated:** 2026-11-03 · **Current developer milestone: v0.3, merged to main**  
+**Repository:** https://github.com/parmtech/Tong-Ledger  
+**Status:** Android-first, open-source **development/testing** build only — not a production release.
 
-## Implemented
-- Flutter Android-first prototype and global Home/Money/Plans/Insights/More navigation.
-- Manual banks, multi-accounts, credit cards, bank-linked or private-lender loans, assets, income sources and expense/payment/transfer entry forms.
-- Versioned finance data codec and AES-256-GCM **encrypted local snapshot** with separate secure OS key, atomic write, fail-closed load and no silent reset.
-- Fictional sample data isolated from real local vault; real data starts empty.
-- Income/expense, transfers, credit purchases/payments, loan principal vs interest calculations, net worth estimate.
-- 30 actual budget plan presets in six groups. Selected plan persists, but editing category percentages is still future work.
-- Tests for ledger invariants, 30 plans, encrypted document authentication/tamper, data codec round trip and fake-store widget flows.
-- Fully documented product blueprint, UX specification, security plan, code handoff and GitHub Wiki-style page.
+## Latest verified milestone
+- [PR #2](https://github.com/parmtech/Tong-Ledger/pull/2) merged at commit `790a585ad83153ff733187e1f0cb22e7f1538893`.
+- [GitHub Actions run 41634486712](https://github.com/parmtech/Tong-Ledger/actions/runs/41634486712) **success**: Flutter analyse, 26 automated tests and Android debug APK build/artifact upload.
+- APK artifact `tong-ledger-android-debug` is available from the Actions run (expires 2026-11-17).
 
-## NOT production ready
-- No user-controlled secure backup/restore, migration recovery, PIN/biometrics, full edit/archive/delete/reconciliation, complete custom budget engine, bills and scheduling or currency support beyond AUD calculations.
-- Encrypted snapshot is not an encrypted transactional SQLite database; future migration/journaling/performance work required.
-- An Android debug APK exists for tester exploration but is **not a signed Google Play release** and not yet personally device-tested.
-- iOS, Windows, macOS and Linux binaries are not built; Flutter portability remains the longer-term plan.
-- No bank connection or automatic real banking feed. Test with fictional balances only until backup/recovery and device security validation.
+## Implemented and committed
+- Flutter Material 3 Android-first app with Home, Money, Plans, Insights and More.
+- Manual institutions, multiple bank cash accounts, credit cards, loans with bank or independent lenders, assets, income sources, cash/card expenses, transfers and repayments.
+- Fixed-point AUD ledger engine; transfers and card repayments do not double-count expenses, loan repayments separate principal and interest.
+- Encrypted local file snapshot using AES-256-GCM and OS-protected key; fail-closed on bad key/data (not yet security-audited).
+- Original bank data starts empty and is separate from explicit fictional demo.
+- 30 real ready-made budget plans across six groups, all total 100%.
+- **v0.3:** create custom budget, clone any preset, edit budget title, take-home income, pay frequency, cycle date and category names/amounts, plus duplicate/delete saved budgets.
+- **v0.3:** budget allocations stored independently in encrypted vault; legacy v0.2 vaults with no budgets field migrate logically to empty list; template presets stay immutable.
+- **v0.3:** planned-vs-actual spending by category, based on dated transactions, excludes transfers/card settlements/loan principal and handles refunds.
+- Automated domain, codec, security smoke tests and widget tests (26 passed on the verified run).
 
-## Next engineering gate
-1. Review and exercise debug APK with fake data on real Android devices; test restart persistence, failed key/restore and low storage.
-2. Build user-editable independent budget plans from the 30 presets, link transactions to categories, integrate bills and goals.
-3. Add encrypted backup/export/import, robust transaction storage, edit/archive workflow and full audit trail.
-4. Finish accessibility, security review, release signing, privacy and financial Play declarations, beta testing.
+## Not production ready; remaining work
+1. **No secure user-controlled backup/recovery.** A lost device/key can result in data loss. Do not use this prototype for real important financial records.
+2. No full transaction editing/archiving, budget category rules, user profiles, multi-currency reports, import/export, full bill/subscription scheduling or envelope rollover.
+3. No biometric lock or comprehensive Android device-security review; encrypted snapshot is not yet a transaction-journaled encrypted database.
+4. Android installed-device testing, low-storage/power-loss recovery and accessibility performance audits remain.
+5. No Play Store signed AAB or approval, no published financial privacy declarations, no production support guarantee.
+6. No iPhone, Windows, macOS or Linux binaries yet; portable Flutter source retained for later.
 
-Source: [STORAGE_DESIGN](STORAGE_DESIGN.md) · [MASTER_BLUEPRINT](MASTER_BLUEPRINT.md) · [TEST_PLAN](TEST_PLAN.md)
+## Next developer priorities
+- Implement independent secure backup/export and tested restore/key recovery without exposing secrets to cloud services.
+- Add edit/archive/reconcile workflows and durable transaction journaling; migrate from single encrypted snapshot when safe.
+- Add detailed bills/scheduled payments and account/category budget scopes.
+- Improve premium UI, light/dark themes, multilingual tutorials, TalkBack and device performance.
+- After security/recovery tests, generate signed Android AAB and complete Play Console policy/beta rollout.
+
+All future contributors must update this status, HANDOFF, TEST_PLAN, CHANGELOG with exact tested/not-tested outcomes. Do not claim release or data recovery reliability based solely on CI compilation.
