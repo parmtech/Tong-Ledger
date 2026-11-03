@@ -2,6 +2,16 @@
 
 All notable changes to Tong Ledger are tracked here. This project is in pre-release development; do not interpret milestones as signed releases.
 
+## Unreleased — Android v0.3 personal budgets (2026-11-03)
+
+- Merged [PR #2](https://github.com/parmtech/Tong-Ledger/pull/2) in `790a585ad83153ff733187e1f0cb22e7f1538893`.
+- Added separate editable budget books, new blank budget, template clone, edit/duplicate/delete, category amount allocation, weekly/fortnightly/monthly/yearly cycle, start date and overbudget warning.
+- Added category-by-category actual spending progress, with correct exclusion of transfers, card repayments and loan principal.
+- Added schema-v1-compatible optional personal-budget persistence to existing encrypted snapshot.
+- Added tests for budget period rollover, independent template clones, expense/refund recognition, old vault compatibility and UI save.
+- CI [run 41634486712](https://github.com/parmtech/Tong-Ledger/actions/runs/41634486712): Flutter analyse, **26 tests**, Android debug APK build and artifact upload successful.
+- **Development/testing only:** no secure backup and no Google Play signed production release.
+
 ## Unreleased — encrypted local vault development milestone (2026-11-03)
 
 - Merged [PR #1](https://github.com/parmtech/Tong-Ledger/pull/1) in commit `26ee173377f09837ee9c21397ad1e7fc554fffc3`.
