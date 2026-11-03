@@ -5,14 +5,19 @@ import '../domain/demo_data.dart';
 import '../domain/finance_models.dart';
 import '../domain/ledger_engine.dart';
 import '../domain/money.dart';
+import '../storage/finance_book_codec.dart';
+import '../storage/finance_store.dart';
+import '../storage/secure_finance_store.dart';
 
 const _navy = Color(0xFF0C1117);
 const _graphite = Color(0xFF1B2633);
 const _gold = Color(0xFFC8AE7D);
 
-/// This UI is a developer preview; ALL balances are fictional and unsaved.
+/// Early encrypted-local-data prototype; not a production-ready release.
 class TongLedgerApp extends StatelessWidget {
-  const TongLedgerApp({super.key});
+  const TongLedgerApp({super.key, this.store});
+
+  final FinanceStore? store;
 
   @override
   Widget build(BuildContext context) {
@@ -28,28 +33,103 @@ class TongLedgerApp extends StatelessWidget {
           brightness: Brightness.dark,
         ),
       ),
-      home: const LedgerShell(),
+      home: LedgerShell(store: store),
     );
   }
 }
 
 class LedgerShell extends StatefulWidget {
-  const LedgerShell({super.key});
+  const LedgerShell({super.key, this.store});
+
+  final FinanceStore? store;
 
   @override
   State<LedgerShell> createState() => _LedgerShellState();
 }
 
 class _LedgerShellState extends State<LedgerShell> {
-  final FinanceBook _book = createDemoBook();
+  FinanceBook _book = FinanceBook();
+  late final FinanceStore _store;
+  bool _loading = true;
+  bool _demo = false;
+  bool _busy = false;
+  String? _loadError;
   int _selectedTab = 0;
   int _serial = 0;
   BudgetTemplate _activeTemplate = budgetTemplates[7];
 
+  @override
+  void initState() {
+    super.initState();
+    _store = widget.store ?? SecureFinanceStore();
+    _restore();
+  }
+
+  Future<void> _restore() async {
+    setState(() {
+      _loading = true;
+      _loadError = null;
+    });
+    try {
+      final restored = await _store.load();
+      if (!mounted) return;
+      setState(() {
+        _book = restored;
+        _demo = false;
+        _activeTemplate = budgetTemplates.firstWhere(
+          (t) => t.id == restored.selectedBudgetTemplateId,
+          orElse: () => budgetTemplates[7],
+        );
+        _loading = false;
+      });
+    } catch (error) {
+      if (!mounted) return;
+      setState(() {
+        _loadError = error.toString();
+        _loading = false;
+      });
+    }
+  }
+
+  void _enterDemo() {
+    setState(() {
+      _book = createDemoBook();
+      _activeTemplate = budgetTemplates[7];
+      _demo = true;
+      _selectedTab = 0;
+    });
+  }
+
+  Future<void> _commit(void Function(FinanceBook) edit) async {
+    if (_busy || _loading || _loadError != null) return;
+    setState(() => _busy = true);
+    try {
+      final next = FinanceBookCodec.decode(FinanceBookCodec.encode(_book));
+      edit(next);
+      // A bad mutation cannot be written or appear in the live UI.
+      FinanceBookCodec.decode(FinanceBookCodec.encode(next));
+      if (!_demo) await _store.save(next);
+      if (!mounted) return;
+      setState(() {
+        _book = next;
+        _activeTemplate = budgetTemplates.firstWhere(
+          (t) => t.id == next.selectedBudgetTemplateId,
+          orElse: () => budgetTemplates[7],
+        );
+      });
+      _message(_demo
+          ? 'Demo-only change; not saved.'
+          : 'Saved in your encrypted local vault.');
+    } catch (error) {
+      _message('Could not save. Existing data was preserved: ${error.toString()}');
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
   String _id() {
     _serial++;
-    return DateTime.now().microsecondsSinceEpoch.toString() +
-        '-' + _serial.toString();
+    return '${DateTime.now().microsecondsSinceEpoch}-$_serial';
   }
 
   void _message(String message) {
@@ -64,10 +144,10 @@ class _LedgerShellState extends State<LedgerShell> {
     String title,
     List<(String, String)> fields,
   ) async {
-    final controllers = <String, TextEditingController>{
-      for (final field in fields) field.$1: TextEditingController(),
+    final values = <String, String>{
+      for (final field in fields) field.$1: '',
     };
-    final response = await showDialog<Map<String, String>>(
+    return showDialog<Map<String, String>>(
       context: context,
       builder: (dialogContext) => AlertDialog(
         title: Text(title),
@@ -80,8 +160,14 @@ class _LedgerShellState extends State<LedgerShell> {
                 for (final field in fields)
                   Padding(
                     padding: const EdgeInsets.symmetric(vertical: 5),
-                    child: TextField(
-                      controller: controllers[field.$1],
+                    child: TextFormField(
+                      onChanged: (value) => values[field.$1] = value.trim(),
+                      keyboardType: [
+                        'amount', 'opening', 'limit', 'owed',
+                        'outstanding', 'instalment', 'interest',
+                      ].contains(field.$1)
+                          ? const TextInputType.numberWithOptions(decimal: true)
+                          : TextInputType.text,
                       decoration: InputDecoration(
                         labelText: field.$2,
                         border: const OutlineInputBorder(),
@@ -89,7 +175,9 @@ class _LedgerShellState extends State<LedgerShell> {
                     ),
                   ),
                 const SizedBox(height: 8),
-                const Text('DEMO ONLY — changes disappear after app restart.'),
+                Text(_demo
+                    ? 'Demo mode: changes will NOT be saved.'
+                    : 'Saved only in this device\'s encrypted vault.'),
               ],
             ),
           ),
@@ -100,19 +188,12 @@ class _LedgerShellState extends State<LedgerShell> {
             child: const Text('Cancel'),
           ),
           FilledButton(
-            onPressed: () => Navigator.pop(dialogContext, {
-              for (final field in fields)
-                field.$1: controllers[field.$1]!.text.trim(),
-            }),
+            onPressed: () => Navigator.pop(dialogContext, {...values}),
             child: const Text('Add'),
           ),
         ],
       ),
     );
-    for (final controller in controllers.values) {
-      controller.dispose();
-    }
-    return response;
   }
 
   Future<T?> _choose<T>(
@@ -150,22 +231,14 @@ class _LedgerShellState extends State<LedgerShell> {
     final money = Money.tryParse(values[key] ?? '');
     if (money == null || money.cents < 0 ||
         (!zeroOk && money.cents == 0)) {
-      _message('Please enter a valid positive AUD amount for ' + key + '.');
+      _message('Please enter a valid positive AUD amount for $key.');
       return null;
     }
     return money.cents;
   }
 
-  void _post(LedgerEntry entry) {
-    _book.entries.add(entry);
-    try {
-      calculateLedger(_book);
-      setState(() {});
-      _message('Demo transaction recorded (not saved).');
-    } on LedgerException catch (error) {
-      _book.entries.removeLast();
-      _message(error.message);
-    }
+  Future<void> _post(LedgerEntry entry) async {
+    await _commit((book) => book.entries.add(entry));
   }
 
   Future<void> _addBank() async {
@@ -176,7 +249,7 @@ class _LedgerShellState extends State<LedgerShell> {
       _message('A name is required.');
       return;
     }
-    setState(() => _book.institutions.add(Institution(id: _id(), name: name)));
+    await _commit((book) => book.institutions.add(Institution(id: _id(), name: name)));
   }
 
   Future<void> _addAccount() async {
@@ -195,7 +268,7 @@ class _LedgerShellState extends State<LedgerShell> {
       _message('Name required.');
       return;
     }
-    setState(() => _book.accounts.add(CashAccount(
+    await _commit((book) => book.accounts.add(CashAccount(
       id: _id(),
       name: fields['name']!,
       institutionId: bank.id,
@@ -221,7 +294,7 @@ class _LedgerShellState extends State<LedgerShell> {
       _message('Name required.');
       return;
     }
-    setState(() => _book.cards.add(CreditCardAccount(
+    await _commit((book) => book.cards.add(CreditCardAccount(
       id: _id(),
       name: fields['name']!,
       limitCents: limit,
@@ -255,7 +328,7 @@ class _LedgerShellState extends State<LedgerShell> {
       _message('Existing bank not found; leave blank for a private lender.');
       return;
     }
-    setState(() => _book.loans.add(LoanAccount(
+    await _commit((book) => book.loans.add(LoanAccount(
       id: _id(),
       institutionId: bankMatches.isEmpty ? null : bankMatches.first.id,
       name: fields['name']!,
@@ -277,7 +350,7 @@ class _LedgerShellState extends State<LedgerShell> {
     if (!mounted || fields == null) return;
     final amount = _cents(fields, 'amount');
     if (amount == null) return;
-    _post(LedgerEntry(
+    await _post(LedgerEntry(
       id: _id(), type: LedgerType.cashExpense,
       amountCents: amount, sourceAccountId: account.id,
       category: fields['category'], at: DateTime.now().toUtc(),
@@ -296,7 +369,7 @@ class _LedgerShellState extends State<LedgerShell> {
     if (!mounted || fields == null) return;
     final amount = _cents(fields, 'amount');
     if (amount == null) return;
-    _post(LedgerEntry(
+    await _post(LedgerEntry(
       id: _id(), type: LedgerType.income,
       amountCents: amount, destinationAccountId: account.id,
       category: fields['category'], at: DateTime.now().toUtc(),
@@ -315,7 +388,7 @@ class _LedgerShellState extends State<LedgerShell> {
     if (!mounted || fields == null) return;
     final amount = _cents(fields, 'amount');
     if (amount == null) return;
-    _post(LedgerEntry(
+    await _post(LedgerEntry(
       id: _id(), type: LedgerType.cardPurchase,
       cardId: card.id, amountCents: amount,
       category: fields['category'], at: DateTime.now().toUtc(),
@@ -337,7 +410,7 @@ class _LedgerShellState extends State<LedgerShell> {
     if (!mounted || fields == null) return;
     final amount = _cents(fields, 'amount');
     if (amount == null) return;
-    _post(LedgerEntry(
+    await _post(LedgerEntry(
       id: _id(), type: LedgerType.cardPayment, amountCents: amount,
       sourceAccountId: account.id, cardId: card.id,
       at: DateTime.now().toUtc(),
@@ -361,14 +434,85 @@ class _LedgerShellState extends State<LedgerShell> {
     final amount = _cents(fields, 'amount');
     final interest = _cents(fields, 'interest', zeroOk: true);
     if (amount == null || interest == null) return;
-    _post(LedgerEntry(
+    await _post(LedgerEntry(
       id: _id(), type: LedgerType.loanPayment, amountCents: amount,
       interestCents: interest, sourceAccountId: account.id,
       loanId: loan.id, at: DateTime.now().toUtc(),
     ));
   }
 
+  Future<void> _addTransfer() async {
+    final from = await _choose(
+      'Transfer from', _book.accounts, (CashAccount a) => a.name,
+    );
+    if (!mounted || from == null) return;
+    final targets = _book.accounts
+        .where((account) => account.id != from.id).toList();
+    final to = await _choose(
+      'Transfer to', targets, (CashAccount a) => a.name,
+    );
+    if (!mounted || to == null) return;
+    final fields = await _form('Transfer between my accounts', [
+      ('amount', 'Transfer amount (AUD)'),
+    ]);
+    if (!mounted || fields == null) return;
+    final amount = _cents(fields, 'amount');
+    if (amount == null) return;
+    await _post(LedgerEntry(
+      id: _id(), type: LedgerType.transfer,
+      amountCents: amount, sourceAccountId: from.id,
+      destinationAccountId: to.id, at: DateTime.now().toUtc(),
+    ));
+  }
+
+  Future<void> _addAsset() async {
+    final fields = await _form('Add an asset', [
+      ('name', 'Asset name (car, house, investment...)'),
+      ('value', 'Estimated current value (AUD)'),
+    ]);
+    if (!mounted || fields == null) return;
+    final value = _cents(fields, 'value', zeroOk: true);
+    if (value == null) return;
+    final name = (fields['name'] ?? '').trim();
+    if (name.isEmpty) {
+      _message('Asset name is required.');
+      return;
+    }
+    await _commit((book) => book.assets.add(AssetRecord(
+      id: _id(), name: name, valuationCents: value,
+      asOf: DateTime.now().toUtc(),
+    )));
+  }
+
+  Future<void> _addIncomeSource() async {
+    final destination = await _choose(
+      'Which account receives income?',
+      _book.accounts, (CashAccount a) => a.name,
+    );
+    if (!mounted || destination == null) return;
+    final fields = await _form('Add expected income source', [
+      ('name', 'Employer, business or source'),
+      ('amount', 'Expected take-home amount (AUD)'),
+      ('cadence', 'Frequency (weekly / fortnightly / monthly / irregular)'),
+    ]);
+    if (!mounted || fields == null) return;
+    final amount = _cents(fields, 'amount');
+    if (amount == null) return;
+    final name = (fields['name'] ?? '').trim();
+    final cadence = (fields['cadence'] ?? '').trim().toLowerCase();
+    const allowed = ['weekly', 'fortnightly', 'monthly', 'irregular'];
+    if (name.isEmpty || !allowed.contains(cadence)) {
+      _message('Please provide a name and a supported frequency.');
+      return;
+    }
+    await _commit((book) => book.incomeSources.add(IncomeSource(
+      id: _id(), name: name, expectedCents: amount,
+      cadence: cadence, destinationAccountId: destination.id,
+    )));
+  }
+
   void _showActions() {
+    if (_busy || _loading || _loadError != null) return;
     showModalBottomSheet<void>(
       context: context,
       showDragHandle: true,
@@ -376,9 +520,12 @@ class _LedgerShellState extends State<LedgerShell> {
         child: ListView(
           shrinkWrap: true,
           children: [
-            const ListTile(title: Text('Add to Demo Ledger')),
+            ListTile(title: Text(_demo ? 'Add to Demo Ledger' : 'Add to Local Vault')),
             _action(sheetContext, Icons.account_balance, 'Bank / institution', _addBank),
             _action(sheetContext, Icons.account_balance_wallet, 'Cash account', _addAccount),
+            _action(sheetContext, Icons.swap_horiz, 'Transfer between accounts', _addTransfer),
+            _action(sheetContext, Icons.directions_car, 'Asset / valuation', _addAsset),
+            _action(sheetContext, Icons.work_outline, 'Income source and frequency', _addIncomeSource),
             _action(sheetContext, Icons.credit_card, 'Credit card', _addCard),
             _action(sheetContext, Icons.payments, 'Loan (private lender supported)', _addLoan),
             _action(sheetContext, Icons.shopping_cart, 'Cash expense', _addExpense),
@@ -448,7 +595,7 @@ class _LedgerShellState extends State<LedgerShell> {
         const SizedBox(height: 5),
         const Text('Your financial world, clearly organised.',
           style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-        _heading('Financial overview • Fictional example'),
+        _heading(_demo ? 'Financial overview • Fictional example' : 'Financial overview • Manual records'),
         Wrap(spacing: 8, runSpacing: 8, children: [
           _metric('Cash accounts', snapshot.cashCents, Icons.account_balance_wallet),
           _metric('Credit cards owed', snapshot.creditCardDebtCents, Icons.credit_card),
@@ -461,7 +608,7 @@ class _LedgerShellState extends State<LedgerShell> {
           child: ListTile(
             leading: const Icon(Icons.pie_chart_outline, color: _gold),
             title: Text(_activeTemplate.name),
-            subtitle: Text(_activeTemplate.group + ' • editable plan coming later'),
+            subtitle: Text('${_activeTemplate.group} • custom allocations coming later'),
             trailing: const Icon(Icons.chevron_right),
             onTap: () {
               setState(() => _selectedTab = 2);
@@ -477,8 +624,10 @@ class _LedgerShellState extends State<LedgerShell> {
             trailing: Text(Money(entry.amountCents).aud),
           ),
         const SizedBox(height: 15),
-        const Text('Sample balances are fictional. No data is saved or bank-connected.',
-          style: TextStyle(color: Colors.white70)),
+        Text(_demo
+          ? 'All balances are fictional and not saved.'
+          : 'These are manually entered estimates, not live bank balances.',
+          style: const TextStyle(color: Colors.white70)),
       ],
     );
   }
@@ -508,8 +657,7 @@ class _LedgerShellState extends State<LedgerShell> {
           ListTile(
             leading: const Icon(Icons.credit_card, color: _gold),
             title: Text(card.name),
-            subtitle: Text('Available: ' +
-                Money(card.limitCents - (snapshot.cardsOwed[card.id] ?? 0)).aud),
+            subtitle: Text('Available: ${Money(card.limitCents - (snapshot.cardsOwed[card.id] ?? 0)).aud}'),
             trailing: Text(Money(snapshot.cardsOwed[card.id] ?? 0).aud),
           ),
         _heading('Loans — bank or independent lender'),
@@ -525,7 +673,7 @@ class _LedgerShellState extends State<LedgerShell> {
           ListTile(
             leading: const Icon(Icons.directions_car, color: _gold),
             title: Text(asset.name),
-            subtitle: Text('As of ' + asset.asOf.toIso8601String().substring(0, 10)),
+            subtitle: Text('As of ${asset.asOf.toIso8601String().substring(0, 10)}'),
             trailing: Text(Money(asset.valuationCents).aud),
           ),
         _heading('Income sources — forecasts only'),
@@ -559,7 +707,7 @@ class _LedgerShellState extends State<LedgerShell> {
                   ListTile(
                     dense: true,
                     title: Text(allocation.key),
-                    subtitle: Text(allocation.value.toString() + '%'),
+                    subtitle: Text('${allocation.value}%'),
                     trailing: Text(Money(example[allocation.key] ?? 0).aud),
                   ),
               ],
@@ -572,11 +720,11 @@ class _LedgerShellState extends State<LedgerShell> {
             child: const Text('Close'),
           ),
           FilledButton(
-            onPressed: () {
-              setState(() => _activeTemplate = template);
-              Navigator.pop(dialogContext);
+            onPressed: () async {
+              await _commit((book) => book.selectedBudgetTemplateId = template.id);
+              if (dialogContext.mounted) Navigator.pop(dialogContext);
             },
-            child: const Text('Use in demo'),
+            child: Text(_demo ? 'Use in demo' : 'Save plan selection'),
           ),
         ],
       ),
@@ -590,8 +738,7 @@ class _LedgerShellState extends State<LedgerShell> {
         _heading('30 ready-made budget plans'),
         const Padding(
           padding: EdgeInsets.all(8),
-          child: Text('Select an actual spending plan, not a visual theme. '
-              'Budget editing, cloning and persistence come in later milestones.'),
+          child: Text('Select a real budget plan. Selection is saved; category editing is coming in the next milestone.'),
         ),
         for (final group in budgetCollections) ...[
           _heading(group),
@@ -615,7 +762,7 @@ class _LedgerShellState extends State<LedgerShell> {
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
-        _heading('Insights — demo ledger only'),
+        _heading(_demo ? 'Insights — fictional demo' : 'Insights — locally recorded'),
         _metric('Recorded income', snapshot.incomeCents, Icons.trending_up),
         _metric('Recorded spending', snapshot.expenseCents, Icons.trending_down),
         _metric('Current cash', snapshot.cashCents, Icons.account_balance_wallet),
@@ -641,12 +788,20 @@ class _LedgerShellState extends State<LedgerShell> {
           title: Text('Full Academy'),
           subtitle: Text('Eight lessons planned; full tutorials in GitHub docs'),
         ),
-        _heading('Privacy and security status'),
+        _heading('Local data and demo'),
+        ListTile(
+          leading: const Icon(Icons.swap_horiz, color: _gold),
+          title: Text(_demo ? 'Return to my encrypted vault' : 'Explore fictional demo'),
+          subtitle: Text(_demo
+              ? 'Discard this demo session and reload stored information.'
+              : 'Your saved data is kept unchanged while in demo mode.'),
+          onTap: _demo ? _restore : _enterDemo,
+        ),
         const ListTile(
           leading: Icon(Icons.shield_outlined, color: _gold),
-          title: Text('Prototype: NO encrypted persistence yet'),
-          subtitle: Text('No signup, no bank connection, all changes in memory. '
-              'Do not add real financial information.'),
+          title: Text('Local encryption enabled — beta'),
+          subtitle: Text('No bank connection or cloud sync. Secure backup, '
+              'biometric lock and release security review are still pending.'),
         ),
         const ListTile(
           leading: Icon(Icons.code, color: _gold),
@@ -659,6 +814,32 @@ class _LedgerShellState extends State<LedgerShell> {
 
   @override
   Widget build(BuildContext context) {
+    if (_loading) {
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    }
+    if (_loadError != null) {
+      return Scaffold(
+        appBar: AppBar(title: const Text('Tong Ledger — Vault locked')),
+        body: SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Icon(Icons.lock_outline, size: 48, color: _gold),
+                const SizedBox(height: 16),
+                const Text('Your encrypted records could not be opened. '
+                    'No data has been reset or overwritten.'),
+                const SizedBox(height: 8),
+                SelectableText(_loadError!),
+                const SizedBox(height: 16),
+                FilledButton(onPressed: _restore, child: const Text('Try again')),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
     final snapshot = calculateLedger(_book);
     final pages = [
       _home(snapshot),
@@ -674,8 +855,8 @@ class _LedgerShellState extends State<LedgerShell> {
             style: TextStyle(color: _gold, letterSpacing: 1.1)),
         actions: [
           IconButton(
-            onPressed: _showActions,
-            tooltip: 'Add demo record',
+            onPressed: _busy ? null : _showActions,
+            tooltip: 'Add finance record',
             icon: const Icon(Icons.add_circle_outline, color: _gold),
           ),
         ],
@@ -686,17 +867,19 @@ class _LedgerShellState extends State<LedgerShell> {
             width: double.infinity,
             color: const Color(0xFF493A20),
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            child: const Text('DEMO • NOT SAVED • DO NOT ENTER REAL DATA',
-              style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
+            child: Text(_demo
+              ? 'DEMO • FICTIONAL • NOT SAVED'
+              : 'PRIVATE LOCAL VAULT • BETA • BACKUP NOT READY',
+              style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
           ),
           Expanded(child: pages[_selectedTab]),
         ],
       ),
       floatingActionButton: _selectedTab <= 1
           ? FloatingActionButton.extended(
-              onPressed: _showActions,
+              onPressed: _busy ? null : _showActions,
               icon: const Icon(Icons.add),
-              label: const Text('Add demo record'),
+              label: Text(_busy ? 'Saving...' : 'Add record'),
             )
           : null,
       bottomNavigationBar: NavigationBar(

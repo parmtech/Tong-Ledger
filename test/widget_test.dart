@@ -1,12 +1,48 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:tong_ledger/app/tong_ledger_app.dart';
+import 'package:tong_ledger/domain/finance_models.dart';
+import 'package:tong_ledger/storage/finance_book_codec.dart';
+import 'package:tong_ledger/storage/finance_store.dart';
+
+class FakeFinanceStore implements FinanceStore {
+  FinanceBook data = FinanceBook();
+  int saves = 0;
+
+  @override
+  Future<FinanceBook> load() async =>
+      FinanceBookCodec.decode(FinanceBookCodec.encode(data));
+
+  @override
+  Future<void> save(FinanceBook book) async {
+    data = FinanceBookCodec.decode(FinanceBookCodec.encode(book));
+    saves++;
+  }
+}
 
 void main() {
-  testWidgets('first screen is clearly marked as unsaved demo', (tester) async {
-    await tester.pumpWidget(const TongLedgerApp());
+  testWidgets('starts with empty local vault and usable bottom navigation',
+      (tester) async {
+    final store = FakeFinanceStore();
+    await tester.pumpWidget(TongLedgerApp(store: store));
+    await tester.pumpAndSettle();
     expect(find.text('TONG LEDGER'), findsOneWidget);
-    expect(find.text('DEMO • NOT SAVED • DO NOT ENTER REAL DATA'), findsOneWidget);
+    expect(find.text('PRIVATE LOCAL VAULT • BETA • BACKUP NOT READY'),
+        findsOneWidget);
     expect(find.byType(NavigationBar), findsOneWidget);
+    expect(store.saves, 0);
+  });
+
+  testWidgets('demo mode does not mutate real local records', (tester) async {
+    final store = FakeFinanceStore();
+    await tester.pumpWidget(TongLedgerApp(store: store));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('More').last);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Explore fictional demo'));
+    await tester.pumpAndSettle();
+    expect(find.text('DEMO • FICTIONAL • NOT SAVED'), findsOneWidget);
+    expect(store.data.accounts, isEmpty);
+    expect(store.saves, 0);
   });
 }
