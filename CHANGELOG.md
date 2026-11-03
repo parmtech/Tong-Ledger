@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased — balanced ledger safety bridge (2026-11-04)
+- Merged [PR #4](https://github.com/parmtech/Tong-Ledger/pull/4) as `ab88997915be62a17c333c8fa48fca96197530bd`.
+- Added independent read-only double-entry projection of all legacy transaction types, separate opening equity, verification of debit/credit equality and account/currency/reference validation.
+- Added regression tests comparing old vs new cash/card/loan/income/expense totals and rejecting tampered/invalid postings.
+- [CI run 41648816107](https://github.com/parmtech/Tong-Ledger/actions/runs/41648816107) passed analysis, tests and Android debug APK build; artifact uploaded. No user-facing app storage migration or production release.
+- Logged [P0 locked-vault recovery issue #5](https://github.com/parmtech/Tong-Ledger/issues/5) for the unmerged experimental backup branch.
+
+
 ## Unreleased — Blueprint and UX audit v2 (2026-11-03)
 
 - Documentation-only [PR #3](https://github.com/parmtech/Tong-Ledger/pull/3), merge commit `6e55d3d2d3d0bee5002f613d2b011f74b01bdd61`.
