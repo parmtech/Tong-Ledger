@@ -46,3 +46,11 @@ Flutter SDK/Android SDK not installed in conversation container; source validati
 - Security and UX gaps remain: no backed-up recovery, no full edit/archive, no complete budget editor, no tested signed release; no device QA yet.
 - Android first; no iPhone/macOS/Linux packages or Windows EXE delivered.
 - Before future work, read the latest IMPLEMENTATION_STATUS.md and this appended note. Do NOT rely on older 'no encrypted storage' statements above; they describe the previous v0.1 milestone.
+
+## 2026-11-03 — v0.3 merge and verified QA
+- [PR #2](https://github.com/parmtech/Tong-Ledger/pull/2) merged commit `790a585ad83153ff733187e1f0cb22e7f1538893`.
+- CI run [41634486712](https://github.com/parmtech/Tong-Ledger/actions/runs/41634486712) passed Flutter analyze, 26 tests, Android debug APK build and artifact upload. Artifact expires 2026-11-17.
+- Implemented independent editable budget books under `lib/domain/budget_plan.dart` and `lib/features/budgets/budget_editor_page.dart`; existing cipher store serializes budgets through `FinanceBookCodec` without breaking v0.2 snapshots.
+- User can create budget from one of 30 actual allocation templates, custom build, edit category amounts/name/income/period/date, duplicate and delete. Actual spending projection excludes card settlements/transfers and loan principal.
+- Important: v0.3 has **no secure backup/restore** or signed production APK/AAB; phone loss/key invalidation can lose records. Do not claim production financial data safety.
+- Next priority: secure backup/recovery and full edit/archive + device tests. Maintain Android-first code; cross-platform targets deferred.
