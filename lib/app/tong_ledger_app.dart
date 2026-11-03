@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
 import '../domain/budget_templates.dart';
+import '../domain/budget_plan.dart';
+import '../features/budgets/budget_editor_page.dart';
 import '../domain/demo_data.dart';
 import '../domain/finance_models.dart';
 import '../domain/ledger_engine.dart';
@@ -100,8 +102,8 @@ class _LedgerShellState extends State<LedgerShell> {
     });
   }
 
-  Future<void> _commit(void Function(FinanceBook) edit) async {
-    if (_busy || _loading || _loadError != null) return;
+  Future<bool> _commit(void Function(FinanceBook) edit) async {
+    if (_busy || _loading || _loadError != null) return false;
     setState(() => _busy = true);
     try {
       final next = FinanceBookCodec.decode(FinanceBookCodec.encode(_book));
@@ -109,7 +111,7 @@ class _LedgerShellState extends State<LedgerShell> {
       // A bad mutation cannot be written or appear in the live UI.
       FinanceBookCodec.decode(FinanceBookCodec.encode(next));
       if (!_demo) await _store.save(next);
-      if (!mounted) return;
+      if (!mounted) return false;
       setState(() {
         _book = next;
         _activeTemplate = budgetTemplates.firstWhere(
@@ -120,8 +122,10 @@ class _LedgerShellState extends State<LedgerShell> {
       _message(_demo
           ? 'Demo-only change; not saved.'
           : 'Saved in your encrypted local vault.');
+      return true;
     } catch (error) {
       _message('Could not save. Existing data was preserved: ${error.toString()}');
+      return false;
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -607,8 +611,11 @@ class _LedgerShellState extends State<LedgerShell> {
           color: _graphite,
           child: ListTile(
             leading: const Icon(Icons.pie_chart_outline, color: _gold),
-            title: Text(_activeTemplate.name),
-            subtitle: Text('${_activeTemplate.group} • custom allocations coming later'),
+            title: Text(_book.budgets.isEmpty
+                ? _activeTemplate.name : _book.budgets.first.name),
+            subtitle: Text(_book.budgets.isEmpty
+                ? 'Choose a plan and customise the allocations'
+                : 'Personal budget • ${Money(_book.budgets.first.allocatedCents).aud} allocated'),
             trailing: const Icon(Icons.chevron_right),
             onTap: () {
               setState(() => _selectedTab = 2);
@@ -689,6 +696,149 @@ class _LedgerShellState extends State<LedgerShell> {
     );
   }
 
+  Future<void> _openBudgetEditor(BudgetPlan plan) async {
+    await Navigator.push<bool>(
+      context,
+      MaterialPageRoute(
+        builder: (_) => BudgetEditorPage(
+          initial: plan,
+          onSave: (edited) => _commit((book) {
+            final index = book.budgets.indexWhere((b) => b.id == edited.id);
+            if (index < 0) {
+              book.budgets.add(edited);
+            } else {
+              book.budgets[index] = edited;
+            }
+            book.selectedBudgetTemplateId = edited.templateId;
+          }),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _createBudgetFromTemplate(BudgetTemplate template) async {
+    final today = DateTime.now();
+    final plan = BudgetPlan.fromTemplate(
+      id: _id(),
+      template: template,
+      incomeCents: 400000,
+      period: BudgetPeriod.monthly,
+      startDate: DateTime.utc(today.year, today.month, 1),
+    );
+    await _openBudgetEditor(plan);
+  }
+
+  Future<void> _createEmptyBudget() async {
+    final now = DateTime.now();
+    await _openBudgetEditor(BudgetPlan(
+      id: _id(), name: 'My Custom Budget',
+      period: BudgetPeriod.monthly,
+      startDate: DateTime.utc(now.year, now.month, 1),
+      incomeCents: 0,
+      allocations: [
+        const BudgetAllocation(category: 'Essentials', plannedCents: 0),
+      ],
+    ));
+  }
+
+  Future<void> _duplicateBudget(BudgetPlan plan) async {
+    await _commit((book) => book.budgets.add(BudgetPlan(
+      id: _id(),
+      name: 'Copy of ${plan.name}',
+      period: plan.period,
+      startDate: plan.startDate,
+      incomeCents: plan.incomeCents,
+      templateId: plan.templateId,
+      allocations: [
+        for (final a in plan.allocations)
+          BudgetAllocation(category: a.category, plannedCents: a.plannedCents),
+      ],
+    )));
+  }
+
+  Future<void> _deleteBudget(BudgetPlan plan) async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (dialog) => AlertDialog(
+        title: const Text('Delete this budget?'),
+        content: Text('This removes ${plan.name}, not your accounts or transactions.'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(dialog, false),
+              child: const Text('Cancel')),
+          FilledButton(onPressed: () => Navigator.pop(dialog, true),
+              child: const Text('Delete budget')),
+        ],
+      ),
+    );
+    if (ok == true && mounted) {
+      await _commit((book) => book.budgets.removeWhere((b) => b.id == plan.id));
+    }
+  }
+
+  Widget _budgetCard(BudgetPlan plan) {
+    final actual = plan.actualSpending(_book.entries, DateTime.now());
+    final spent = actual.values.fold<int>(0, (total, v) => total + v);
+    return Card(
+      color: _graphite,
+      child: ExpansionTile(
+        leading: const Icon(Icons.donut_large, color: _gold),
+        title: Text(plan.name),
+        subtitle: Text('${plan.period.name} • Planned ${Money(plan.incomeCents).aud}'
+            ' • Spent ${Money(spent).aud}'),
+        children: [
+          for (final category in plan.allocations)
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 5),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(children: [
+                    Expanded(child: Text(category.category)),
+                    Text('${Money(actual[category.category] ?? 0).aud} / '
+                        '${Money(category.plannedCents).aud}'),
+                  ]),
+                  const SizedBox(height: 5),
+                  LinearProgressIndicator(
+                    value: category.plannedCents == 0
+                        ? 0
+                        : ((actual[category.category] ?? 0) /
+                            category.plannedCents).clamp(0, 1).toDouble(),
+                    color: _gold,
+                  ),
+                ],
+              ),
+            ),
+          if (plan.isOverallocated)
+            const Text('Warning: allocated amount exceeds planned income.',
+                style: TextStyle(color: Colors.orangeAccent)),
+          Padding(
+            padding: const EdgeInsets.all(8),
+            child: Wrap(
+              spacing: 8,
+              children: [
+                TextButton.icon(
+                  onPressed: () => _openBudgetEditor(plan),
+                  icon: const Icon(Icons.edit_outlined),
+                  label: const Text('Edit'),
+                ),
+                TextButton.icon(
+                  onPressed: () => _duplicateBudget(plan),
+                  icon: const Icon(Icons.copy_outlined),
+                  label: const Text('Duplicate'),
+                ),
+                TextButton.icon(
+                  onPressed: () => _deleteBudget(plan),
+                  icon: const Icon(Icons.delete_outline),
+                  label: const Text('Delete'),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Future<void> _showBudget(BudgetTemplate template) async {
     final example = template.amountsFor(400000);
     await showDialog<void>(
@@ -720,11 +870,11 @@ class _LedgerShellState extends State<LedgerShell> {
             child: const Text('Close'),
           ),
           FilledButton(
-            onPressed: () async {
-              await _commit((book) => book.selectedBudgetTemplateId = template.id);
-              if (dialogContext.mounted) Navigator.pop(dialogContext);
+            onPressed: () {
+              Navigator.pop(dialogContext);
+              _createBudgetFromTemplate(template);
             },
-            child: Text(_demo ? 'Use in demo' : 'Save plan selection'),
+            child: const Text('Create my budget'),
           ),
         ],
       ),
@@ -735,10 +885,25 @@ class _LedgerShellState extends State<LedgerShell> {
     return ListView(
       padding: const EdgeInsets.all(12),
       children: [
+        _heading('My saved budgets'),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 4),
+          child: OutlinedButton.icon(
+            onPressed: _createEmptyBudget,
+            icon: const Icon(Icons.add_circle_outline),
+            label: const Text('Create custom budget'),
+          ),
+        ),
+        if (_book.budgets.isEmpty)
+          const Padding(
+            padding: EdgeInsets.all(8),
+            child: Text('No personal budgets yet. Choose a ready-made plan below and customise it.'),
+          ),
+        for (final plan in _book.budgets) _budgetCard(plan),
         _heading('30 ready-made budget plans'),
         const Padding(
           padding: EdgeInsets.all(8),
-          child: Text('Select a real budget plan. Selection is saved; category editing is coming in the next milestone.'),
+          child: Text('Choose a ready-made plan, adjust income, rename/add/delete categories and save a separate copy.'),
         ),
         for (final group in budgetCollections) ...[
           _heading(group),

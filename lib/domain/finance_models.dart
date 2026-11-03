@@ -1,3 +1,5 @@
+import 'budget_plan.dart';
+
 /// Pure Dart models. These are intentionally UI- and storage-independent.
 /// This initial sample operates in memory only. Do not enter real personal data.
 enum AccountKind { transaction, savings, cash, offset, other }
@@ -131,6 +133,7 @@ class FinanceBook {
     List<AssetRecord>? assets,
     List<IncomeSource>? incomeSources,
     List<LedgerEntry>? entries,
+    List<BudgetPlan>? budgets,
     this.selectedBudgetTemplateId,
   })  : institutions = institutions ?? [],
         accounts = accounts ?? [],
@@ -138,7 +141,8 @@ class FinanceBook {
         loans = loans ?? [],
         assets = assets ?? [],
         incomeSources = incomeSources ?? [],
-        entries = entries ?? [];
+        entries = entries ?? [],
+        budgets = budgets ?? [];
 
   final List<Institution> institutions;
   final List<CashAccount> accounts;
@@ -147,5 +151,6 @@ class FinanceBook {
   final List<AssetRecord> assets;
   final List<IncomeSource> incomeSources;
   final List<LedgerEntry> entries;
+  final List<BudgetPlan> budgets;
   String? selectedBudgetTemplateId;
 }

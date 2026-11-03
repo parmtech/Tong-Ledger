@@ -45,4 +45,22 @@ void main() {
     expect(store.data.accounts, isEmpty);
     expect(store.saves, 0);
   });
+  testWidgets('custom budget can be saved independently in the local vault',
+      (tester) async {
+    final store = FakeFinanceStore();
+    await tester.pumpWidget(TongLedgerApp(store: store));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Plans').last);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Create custom budget'));
+    await tester.pumpAndSettle();
+    expect(find.text('Budget Editor'), findsOneWidget);
+    await tester.tap(find.text('Save').last);
+    await tester.pumpAndSettle();
+    expect(store.saves, 1);
+    expect(store.data.budgets, hasLength(1));
+    expect(store.data.budgets.single.name, 'My Custom Budget');
+    expect(find.text('My Custom Budget'), findsWidgets);
+  });
+
 }
