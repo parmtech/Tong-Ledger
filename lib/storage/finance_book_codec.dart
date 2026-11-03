@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import '../domain/finance_models.dart';
+import '../domain/budget_plan.dart';
 import '../domain/ledger_engine.dart';
 
 /// Versioned strict snapshot codec; decoded JSON must only live in memory.
@@ -50,6 +51,26 @@ class FinanceBookCodec {
               'id': a.id, 'name': a.name, 'expectedCents': a.expectedCents,
               'cadence': a.cadence,
               'destinationAccountId': a.destinationAccountId,
+            },
+        ],
+        'budgets': [
+          for (final plan in book.budgets)
+            {
+              'id': plan.id,
+              'name': plan.name,
+              'period': plan.period.name,
+              'startDate': DateTime.utc(
+                plan.startDate.year, plan.startDate.month, plan.startDate.day,
+              ).toIso8601String(),
+              'incomeCents': plan.incomeCents,
+              'templateId': plan.templateId,
+              'allocations': [
+                for (final category in plan.allocations)
+                  {
+                    'category': category.category,
+                    'plannedCents': category.plannedCents,
+                  },
+              ],
             },
         ],
         'entries': [
@@ -120,6 +141,28 @@ class FinanceBookCodec {
         cadence: r['cadence'] as String,
         destinationAccountId: r['destinationAccountId'] as String?,
       )),
+      budgets: [
+        // Schema v1 had no custom budget plans. Default to an empty list for
+        // backwards-compatible encrypted vault upgrades.
+        for (final raw in (data['budgets'] as List<dynamic>? ?? const []))
+          BudgetPlan(
+            id: record(raw)['id'] as String,
+            name: record(raw)['name'] as String,
+            period: BudgetPeriod.values.byName(
+              record(raw)['period'] as String,
+            ),
+            startDate: DateTime.parse(record(raw)['startDate'] as String),
+            incomeCents: record(raw)['incomeCents'] as int,
+            templateId: record(raw)['templateId'] as String?,
+            allocations: [
+              for (final item in record(raw)['allocations'] as List<dynamic>)
+                BudgetAllocation(
+                  category: record(item)['category'] as String,
+                  plannedCents: record(item)['plannedCents'] as int,
+                ),
+            ],
+          ),
+      ],
       entries: read('entries', (r) => LedgerEntry(
         id: r['id'] as String, type: LedgerType.values.byName(r['type'] as String),
         amountCents: r['amountCents'] as int, at: DateTime.parse(r['at'] as String),
@@ -139,11 +182,15 @@ class FinanceBookCodec {
       book.assets.map((e) => e.id).toList(),
       book.incomeSources.map((e) => e.id).toList(),
       book.entries.map((e) => e.id).toList(),
+      book.budgets.map((e) => e.id).toList(),
     ];
     for (final ids in idsByCollection) {
       if (ids.any((id) => id.isEmpty) || ids.toSet().length != ids.length) {
         throw const FormatException('Duplicate or empty record identifier.');
       }
+    }
+    for (final plan in book.budgets) {
+      plan.validate();
     }
     calculateLedger(book);
     return book;
