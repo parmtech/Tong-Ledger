@@ -172,7 +172,10 @@ class _LedgerShellState extends State<LedgerShell> {
     final fields = await _form('Add institution', [('name', 'Bank or lender name')]);
     if (!mounted || fields == null) return;
     final name = fields['name'] ?? '';
-    if (name.isEmpty) return _message('A name is required.');
+    if (name.isEmpty) {
+      _message('A name is required.');
+      return;
+    }
     setState(() => _book.institutions.add(Institution(id: _id(), name: name)));
   }
 
@@ -188,7 +191,10 @@ class _LedgerShellState extends State<LedgerShell> {
     if (!mounted || fields == null) return;
     final balance = _cents(fields, 'opening', zeroOk: true);
     if (balance == null) return;
-    if ((fields['name'] ?? '').isEmpty) return _message('Name required.');
+    if ((fields['name'] ?? '').isEmpty) {
+      _message('Name required.');
+      return;
+    }
     setState(() => _book.accounts.add(CashAccount(
       id: _id(),
       name: fields['name']!,
@@ -211,7 +217,10 @@ class _LedgerShellState extends State<LedgerShell> {
     final limit = _cents(fields, 'limit', zeroOk: true);
     final owed = _cents(fields, 'owed', zeroOk: true);
     if (limit == null || owed == null) return;
-    if ((fields['name'] ?? '').isEmpty) return _message('Name required.');
+    if ((fields['name'] ?? '').isEmpty) {
+      _message('Name required.');
+      return;
+    }
     setState(() => _book.cards.add(CreditCardAccount(
       id: _id(),
       name: fields['name']!,
@@ -225,6 +234,7 @@ class _LedgerShellState extends State<LedgerShell> {
     final fields = await _form('New loan (bank or private lender)', [
       ('name', 'Loan nickname'),
       ('lender', 'Lender / company name'),
+      ('bank', 'Linked existing bank name (optional)'),
       ('outstanding', 'Outstanding principal (AUD)'),
       ('instalment', 'Regular instalment (AUD)'),
     ]);
@@ -234,10 +244,20 @@ class _LedgerShellState extends State<LedgerShell> {
     if (outstanding == null || instalment == null) return;
     if ((fields['name'] ?? '').isEmpty ||
         (fields['lender'] ?? '').isEmpty) {
-      return _message('Loan and lender names are required.');
+      _message('Loan and lender names are required.');
+      return;
+    }
+    final bankName = (fields['bank'] ?? '').trim().toLowerCase();
+    final bankMatches = _book.institutions.where(
+      (bank) => bank.name.toLowerCase() == bankName,
+    ).toList();
+    if (bankName.isNotEmpty && bankMatches.isEmpty) {
+      _message('Existing bank not found; leave blank for a private lender.');
+      return;
     }
     setState(() => _book.loans.add(LoanAccount(
       id: _id(),
+      institutionId: bankMatches.isEmpty ? null : bankMatches.first.id,
       name: fields['name']!,
       lenderName: fields['lender']!,
       openingOutstandingCents: outstanding,
