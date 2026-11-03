@@ -36,7 +36,8 @@ class BackupFileService {
       type: FileType.custom,
       allowedExtensions: ['tlbackup'],
       allowMultiple: false,
-      withData: true,
+      // Avoid eagerly materialising untrusted large backup bytes in memory.
+      withData: false,
     );
     if (selection == null || selection.files.isEmpty) return null;
     final picked = selection.files.single;
@@ -47,7 +48,11 @@ class BackupFileService {
     if (picked.bytes != null) {
       bytes = picked.bytes!;
     } else if (picked.path != null) {
-      bytes = await File(picked.path!).readAsBytes();
+      final file = File(picked.path!);
+      if (await file.length() > PassphraseBackup.maxBackupBytes) {
+        throw const FormatException('Backup exceeds the file size limit.');
+      }
+      bytes = await file.readAsBytes();
     } else {
       throw const FormatException('Could not read the selected backup file.');
     }
