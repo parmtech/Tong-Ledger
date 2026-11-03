@@ -10,6 +10,7 @@ import '../domain/money.dart';
 import '../storage/finance_book_codec.dart';
 import '../storage/finance_store.dart';
 import '../storage/secure_finance_store.dart';
+import '../features/backup/backup_restore_page.dart';
 
 const _navy = Color(0xFF0C1117);
 const _graphite = Color(0xFF1B2633);
@@ -938,6 +939,21 @@ class _LedgerShellState extends State<LedgerShell> {
     );
   }
 
+  Future<void> _openBackups() async {
+    if (_busy || _loading || _loadError != null) return;
+    if (_demo) {
+      _message('Return to your local vault before exporting a backup.');
+      return;
+    }
+    final restored = await Navigator.push<bool>(
+      context,
+      MaterialPageRoute(
+        builder: (_) => BackupRestorePage(book: _book, store: _store),
+      ),
+    );
+    if (restored == true && mounted) await _restore();
+  }
+
   Widget _more() {
     return ListView(
       padding: const EdgeInsets.all(16),
@@ -954,6 +970,13 @@ class _LedgerShellState extends State<LedgerShell> {
           subtitle: Text('Eight lessons planned; full tutorials in GitHub docs'),
         ),
         _heading('Local data and demo'),
+        ListTile(
+          leading: const Icon(Icons.backup_outlined, color: _gold),
+          title: const Text('Encrypted backup & restore'),
+          subtitle: const Text('Portable password-protected backup file'),
+          trailing: const Icon(Icons.chevron_right),
+          onTap: _busy ? null : _openBackups,
+        ),
         ListTile(
           leading: const Icon(Icons.swap_horiz, color: _gold),
           title: Text(_demo ? 'Return to my encrypted vault' : 'Explore fictional demo'),
