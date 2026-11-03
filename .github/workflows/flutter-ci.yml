@@ -1,0 +1,44 @@
+name: Flutter Android Foundation CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  android-foundation:
+    name: Analyse, test and build Android debug
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - name: Generate Android platform shell
+        run: flutter create --platforms=android --org au.parmtech --project-name tong_ledger .
+      - name: Get dependencies
+        run: flutter pub get
+      - name: Analyse source
+        run: flutter analyze
+      - name: Unit and widget tests
+        run: flutter test
+      - name: Build Android debug APK (NOT A RELEASE)
+        run: flutter build apk --debug
+      - name: Upload debug APK for testers
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: tong-ledger-android-debug
+          path: build/app/outputs/flutter-apk/app-debug.apk
+          if-no-files-found: error
+          retention-days: 14
