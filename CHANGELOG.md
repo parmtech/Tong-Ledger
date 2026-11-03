@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased — Blueprint and UX audit v2 (2026-11-03)
+
+- Documentation-only [PR #3](https://github.com/parmtech/Tong-Ledger/pull/3), merge commit `6e55d3d2d3d0bee5002f613d2b011f74b01bdd61`.
+- Published canonical A-to-Z v2 product plan; 22 prioritized UX, accounting, privacy/recovery and scalability findings.
+- Added detailed UI/navigation design, balanced journal and data integrity requirements, and staged Android-first cross-platform roadmap.
+- No app source/binary release was changed in this documentation milestone.
+
+
 All notable changes to Tong Ledger are tracked here. This project is in pre-release development; do not interpret milestones as signed releases.
 
 ## Unreleased — Android v0.3 personal budgets (2026-11-03)
