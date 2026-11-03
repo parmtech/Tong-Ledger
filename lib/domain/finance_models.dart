@@ -131,6 +131,7 @@ class FinanceBook {
     List<AssetRecord>? assets,
     List<IncomeSource>? incomeSources,
     List<LedgerEntry>? entries,
+    this.selectedBudgetTemplateId,
   })  : institutions = institutions ?? [],
         accounts = accounts ?? [],
         cards = cards ?? [],
@@ -146,4 +147,5 @@ class FinanceBook {
   final List<AssetRecord> assets;
   final List<IncomeSource> incomeSources;
   final List<LedgerEntry> entries;
-}
+  String? selectedBudgetTemplateId;
+
