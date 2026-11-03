@@ -115,11 +115,16 @@ class SecureFinanceStore implements RecoverableFinanceStore {
     try {
       final primary = await _primaryKey(existingFile: true);
       final book = await _decrypt(file, primary);
-      // A crash after recovery-key deletion but before marker deletion is
-      // safe to finalise; an earlier interruption with a pending key is not.
+      // A valid primary key authenticates the active vault. If recovery
+      // was interrupted before file activation, retain the old vault and
+      // discard only the nonactive candidate / staging marker. If activation
+      // already succeeded, this finalises a completed recovery instead.
       if (await marker.exists()) {
-        final pending = await _keys.read(_recoverySlot);
-        if (pending == null) await marker.delete();
+        await _keys.delete(_recoverySlot);
+        if (await _candidate(file).exists()) {
+          await _candidate(file).delete();
+        }
+        await marker.delete();
       }
       return book;
     } catch (error) {
