@@ -26,6 +26,8 @@ jobs:
           cache: true
       - name: Generate Android platform shell
         run: flutter create --platforms=android --org au.parmtech --project-name tong_ledger .
+      - name: Enforce Android backup and transfer exclusions
+        run: python3 scripts/prepare_android.py
       - name: Get dependencies
         run: flutter pub get
       - name: Analyse source
