@@ -16,7 +16,7 @@ class BackupFileService {
   final PassphraseBackup _codec;
 
   /// Returns false when the user cancels the OS save dialog.
-  Future<bool> export(FinanceBook book, String passphrase) async {
+  Future<bool> exportBackup(FinanceBook book, String passphrase) async {
     final encrypted = await _codec.create(book, passphrase);
     final filename = 'tong-ledger-' +
         DateTime.now().millisecondsSinceEpoch.toString() + '.tlbackup';
@@ -31,7 +31,7 @@ class BackupFileService {
   }
 
   /// Returns null when the OS picker is cancelled; never modifies the vault.
-  Future<FinanceBook?> import(String passphrase) async {
+  Future<FinanceBook?> importBackup(String passphrase) async {
     final selection = await FilePicker.platform.pickFiles(
       type: FileType.custom,
       allowedExtensions: ['tlbackup'],
