@@ -10,6 +10,7 @@ import '../domain/money.dart';
 import '../storage/finance_book_codec.dart';
 import '../storage/finance_store.dart';
 import '../storage/secure_finance_store.dart';
+import '../features/backup/backup_restore_page.dart';
 
 const _navy = Color(0xFF0C1117);
 const _graphite = Color(0xFF1B2633);
@@ -938,6 +939,35 @@ class _LedgerShellState extends State<LedgerShell> {
     );
   }
 
+  Future<void> _openBackups() async {
+    if (_busy || _loading || _loadError != null) return;
+    if (_demo) {
+      _message('Return to your saved vault before exporting a backup.');
+      return;
+    }
+    final restored = await Navigator.push<bool>(
+      context,
+      MaterialPageRoute(
+        builder: (_) => BackupRestorePage(book: _book, store: _store),
+      ),
+    );
+    if (restored == true && mounted) await _restore();
+  }
+
+  Future<void> _recoverLockedVault() async {
+    if (_store is! RecoverableFinanceStore) return;
+    final success = await Navigator.push<bool>(
+      context,
+      MaterialPageRoute(
+        builder: (_) => BackupRestorePage(
+          store: _store,
+          recoveryOnly: true,
+        ),
+      ),
+    );
+    if (success == true && mounted) await _restore();
+  }
+
   Widget _more() {
     return ListView(
       padding: const EdgeInsets.all(16),
@@ -954,6 +984,13 @@ class _LedgerShellState extends State<LedgerShell> {
           subtitle: Text('Eight lessons planned; full tutorials in GitHub docs'),
         ),
         _heading('Local data and demo'),
+        ListTile(
+          leading: const Icon(Icons.backup_outlined, color: _gold),
+          title: const Text('Encrypted backup & restore'),
+          subtitle: const Text('Password-protected, manual file export/import'),
+          trailing: const Icon(Icons.chevron_right),
+          onTap: _busy ? null : _openBackups,
+        ),
         ListTile(
           leading: const Icon(Icons.swap_horiz, color: _gold),
           title: Text(_demo ? 'Return to my encrypted vault' : 'Explore fictional demo'),
@@ -998,7 +1035,21 @@ class _LedgerShellState extends State<LedgerShell> {
                 const SizedBox(height: 8),
                 SelectableText(_loadError!),
                 const SizedBox(height: 16),
-                FilledButton(onPressed: _restore, child: const Text('Try again')),
+                FilledButton(
+                  onPressed: _restore,
+                  child: const Text('Try again'),
+                ),
+                if (_store is RecoverableFinanceStore) ...[
+                  const SizedBox(height: 12),
+                  OutlinedButton.icon(
+                    onPressed: _recoverLockedVault,
+                    icon: const Icon(Icons.restore_outlined),
+                    label: const Text('Recover from encrypted backup'),
+                  ),
+                  const SizedBox(height: 12),
+                  const Text('A separate backup password is required. '
+                      'The unreadable encrypted vault is preserved.'),
+                ],
               ],
             ),
           ),
@@ -1034,7 +1085,7 @@ class _LedgerShellState extends State<LedgerShell> {
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
             child: Text(_demo
               ? 'DEMO • FICTIONAL • NOT SAVED'
-              : 'PRIVATE LOCAL VAULT • BETA • BACKUP NOT READY',
+              : 'PRIVATE LOCAL VAULT • BETA • BACKUP TESTING ONLY',
               style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
           ),
           Expanded(child: pages[_selectedTab]),
