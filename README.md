@@ -1,6 +1,10 @@
-# Tong Ledger
-
-### Your Money. Your Rules.
+<p align="center">
+  <img src="assets/brand/mark.svg" width="142" height="142" alt="Tong Ledger gold ledger monogram" />
+</p>
+<h1 align="center">TONG LEDGER</h1>
+<p align="center"><strong>YOUR MONEY. YOUR RULES.</strong><br/>
+  Premium open-source money manager & budget planner • By ParmTech
+</p>
 
 **Tong Ledger by ParmTech** is a free, open-source, offline-first personal finance and budget planner with a luxury-inspired experience. **Android is the first release target**; Flutter keeps the business logic portable to iOS, Windows, macOS and Linux for later releases.
 
@@ -20,7 +24,7 @@
 
 | Read first | Purpose |
 | --- | --- |
-| [Master blueprint](docs/MASTER_BLUEPRINT.md) | A-to-Z product scope, calculations, screens, release criteria |
+| [Wiki start page](docs/WIKI_HOME.md) | Beautiful documentation portal / getting started |\n| [Master blueprint](docs/MASTER_BLUEPRINT.md) | A-to-Z product scope, calculations, screens, release criteria |
 | [30 budget plans](docs/BUDGET_TEMPLATES.md) | Six collections of real allocation plans |
 | [Architecture](docs/ARCHITECTURE.md) | Shared domain layers and application boundaries |
 | [Data model](docs/DATA_MODEL.md) | Institution/account/card/loan/ledger schema |
