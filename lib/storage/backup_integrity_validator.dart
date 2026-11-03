@@ -11,6 +11,54 @@ class BackupIntegrityValidator {
     final institutionIds = book.institutions.map((e) => e.id).toSet();
     final cashIds = book.accounts.map((e) => e.id).toSet();
 
+    const maxCents = 100000000000000;
+    bool safeSigned(int value) =>
+        value >= -maxCents && value <= maxCents;
+    bool safePositive(int value) =>
+        value >= 0 && value <= maxCents;
+
+    for (final bank in book.institutions) {
+      if (bank.name.trim().isEmpty || bank.name.length > 200) {
+        throw const FormatException('Invalid institution name.');
+      }
+    }
+    for (final account in book.accounts) {
+      if (account.name.trim().isEmpty ||
+          account.name.length > 200 ||
+          !safeSigned(account.openingCents)) {
+        throw const FormatException('Invalid account opening balance or name.');
+      }
+    }
+    for (final card in book.cards) {
+      if (card.name.trim().isEmpty ||
+          !safePositive(card.limitCents) ||
+          !safeSigned(card.openingOwedCents)) {
+        throw const FormatException('Invalid credit card amount or name.');
+      }
+    }
+    for (final loan in book.loans) {
+      if (loan.name.trim().isEmpty ||
+          loan.lenderName.trim().isEmpty ||
+          !safePositive(loan.openingOutstandingCents) ||
+          (loan.instalmentCents != null &&
+              !safePositive(loan.instalmentCents!))) {
+        throw const FormatException('Invalid loan principal, payment or lender.');
+      }
+    }
+    for (final asset in book.assets) {
+      if (asset.name.trim().isEmpty ||
+          !safePositive(asset.valuationCents)) {
+        throw const FormatException('Invalid asset valuation or name.');
+      }
+    }
+    for (final income in book.incomeSources) {
+      if (income.name.trim().isEmpty ||
+          !safePositive(income.expectedCents) ||
+          income.cadence.trim().isEmpty) {
+        throw const FormatException('Invalid income source or forecast.');
+      }
+    }
+
     for (final account in book.accounts) {
       final bank = account.institutionId;
       if (bank != null && !institutionIds.contains(bank)) {
