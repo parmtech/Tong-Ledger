@@ -37,11 +37,15 @@ class EncryptedJournalStage {
     }
 
     final directory = await stagingRoot.createTemp('journal-stage-');
-    final file = File('${directory.path}${Platform.pathSeparator}candidate.enc');
+    final prefix = '${directory.path}${Platform.pathSeparator}';
+    final pending = File('${prefix}candidate.pending');
+    final candidate = File('${prefix}candidate.enc');
     try {
-      await file.writeAsString(envelope, flush: true);
-      await verify(file: file, sourceSnapshot: sourceSnapshot, key: key);
-      return file;
+      await pending.writeAsString(envelope, flush: true);
+      await verify(file: pending, sourceSnapshot: sourceSnapshot, key: key);
+      // Publish only after authenticated readback. Both paths are in the
+      // same uniquely allocated directory; no active vault is replaced.
+      return await pending.rename(candidate.path);
     } catch (_) {
       // Only remove the unique directory allocated by this invocation.
       await directory.delete(recursive: true);

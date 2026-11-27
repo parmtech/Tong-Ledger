@@ -96,10 +96,35 @@ void main() {
     ), throwsFormatException);
   });
 
+  test('verified candidate is published without pending ciphertext', () async {
+    final file = await stage.create(
+      stagingRoot: root, sourceSnapshot: source, key: key,
+    );
+    expect(file.uri.pathSegments.last, 'candidate.enc');
+    final children = await file.parent.list().toList();
+    expect(children.map((entry) => entry.path), [file.path]);
+    await stage.verify(file: file, sourceSnapshot: source, key: key);
+  });
+
+  test('failed readback never publishes a candidate', () async {
+    final failingStage = EncryptedJournalStage(cipher: _RejectReadback());
+    await expectLater(failingStage.create(
+      stagingRoot: root, sourceSnapshot: source, key: key,
+    ), throwsFormatException);
+    expect(await root.list().toList(), isEmpty);
+  });
+
   test('invalid source cannot create a stage', () async {
     await expectLater(stage.create(
       stagingRoot: root, sourceSnapshot: '{"schema":999}', key: key,
     ), throwsFormatException);
     expect(await root.list().toList(), isEmpty);
   });
+}
+
+class _RejectReadback extends EncryptedDocument {
+  @override
+  Future<String> decrypt(String envelope, List<int> key) async {
+    throw const FormatException('Simulated readback failure.');
+  }
 }
