@@ -1,7 +1,7 @@
-# Verified SQLCipher journal migration candidate
+# Verified SQLCipher migration candidate
 
-The candidate service projects a validated legacy FinanceBook in memory, creates a unique SQLCipher staging database, closes it and independently reopens it with the supplied key. It compares the entire canonical revision-zero journal against the original source projection, not just totals. A mismatched projection is rejected. The original vault is never opened or replaced by this service.
+The experimental candidate contains both the canonical revision-zero journal and a separate immutable canonical FinanceBook snapshot inside the encrypted database. This preserves all fields understood by the legacy codec, including budgets, assets, institutions and income sources, rather than only journal balances. Creation checks that the snapshot projects to the initial journal. Independent reopen compares both representations to the source.
 
-This is journal-only migration. Institutions, budget plans, asset valuations, other legacy metadata and the source ciphertext must remain available; matching journal postings does not establish complete FinanceBook equivalence. No production activation, key management, filesystem crash recovery or rollback is implemented here.
+The legacy ciphertext remains untouched. The stored snapshot is historical migration evidence, not current app state after journal edits. This does not implement normalized metadata tables, a production upgrade from earlier experimental databases, key management, activation, rollback or process-kill recovery. Earlier experimental stage files without the snapshot table must be recreated, not silently upgraded.
 
-Run on Android or iOS test devices: flutter test integration_test/sqlcipher_migration_candidate_test.dart -d <device-id>. Tests are fictional and do not require real financial data. Native SQLCipher execution must be verified separately from static analysis and ordinary unit tests.
+Run: flutter test integration_test/sqlcipher_migration_candidate_test.dart -d <device-id>. Native device verification is still required.

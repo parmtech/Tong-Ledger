@@ -4,6 +4,8 @@ import 'dart:io';
 import 'package:sqflite_sqlcipher/sqflite.dart';
 
 import '../domain/balanced_journal.dart';
+import 'backup_integrity_validator.dart';
+import 'finance_book_codec.dart';
 import 'journal_revision_codec.dart';
 import 'journal_transaction_store.dart';
 
@@ -28,6 +30,7 @@ class SqlCipherJournalStage implements JournalTransactionStore {
   static Future<void> _requireCipher(Database db) async {
     final result = await db.rawQuery('PRAGMA cipher_version');
     if (result.isEmpty || result.first.values.isEmpty ||
+        result.first.values.first == null ||
         result.first.values.first.toString().trim().isEmpty) {
       throw StateError('Native SQLCipher unavailable.');
     }
@@ -46,9 +49,22 @@ class SqlCipherJournalStage implements JournalTransactionStore {
     required Directory stagingRoot,
     required BalancedJournal initial,
     required List<int> key,
+    String? legacySnapshot,
   }) async {
     final password = _password(key);
     final payload = _encode(JournalRevision(number: 0, journal: initial));
+    String? canonicalSnapshot;
+    if (legacySnapshot != null) {
+      final book = FinanceBookCodec.decode(legacySnapshot);
+      BackupIntegrityValidator.validate(book);
+      canonicalSnapshot = FinanceBookCodec.encode(book);
+      final projected = JournalRevisionCodec.encode(JournalRevision(
+        number: 0, journal: BalancedJournal.fromLegacy(book),
+      ));
+      if (projected != payload) {
+        throw const FormatException('Legacy snapshot differs from initial journal.');
+      }
+    }
     final directory = await stagingRoot.createTemp('sqlcipher-stage-');
     final file = File('${directory.path}${Platform.pathSeparator}journal.db');
     Database? db;
@@ -64,6 +80,15 @@ class SqlCipherJournalStage implements JournalTransactionStore {
             'payload TEXT NOT NULL)',
           );
           await database.insert(_table, {'id': 1, 'revision': 0, 'payload': payload});
+          await database.execute(
+            'CREATE TABLE legacy_snapshot (id INTEGER PRIMARY KEY CHECK(id = 1), '
+            'payload TEXT NOT NULL)',
+          );
+          if (canonicalSnapshot != null) {
+            await database.insert('legacy_snapshot', {
+              'id': 1, 'payload': canonicalSnapshot,
+            });
+          }
         },
       );
       db = opened;
@@ -145,6 +170,25 @@ class SqlCipherJournalStage implements JournalTransactionStore {
     if (changed != 1) throw const JournalWriteConflict();
     return after;
   });
+
+  /// Immutable migration source, not the current financial state after edits.
+  Future<String?> readLegacySnapshot() async {
+    final rows = await _db.query('legacy_snapshot', limit: 2);
+    if (rows.isEmpty) return null;
+    if (rows.length != 1 || rows.single['id'] != 1) {
+      throw const FormatException('Invalid legacy snapshot row.');
+    }
+    final payload = rows.single['payload'];
+    if (payload is! String) {
+      throw const FormatException('Invalid legacy snapshot payload.');
+    }
+    final book = FinanceBookCodec.decode(payload);
+    BackupIntegrityValidator.validate(book);
+    if (FinanceBookCodec.encode(book) != payload) {
+      throw const FormatException('Noncanonical legacy snapshot.');
+    }
+    return payload;
+  }
 
   Future<void> close() => _db.close();
 }

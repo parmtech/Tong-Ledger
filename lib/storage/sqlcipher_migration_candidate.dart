@@ -1,12 +1,13 @@
 import 'dart:io';
 
+import 'finance_book_codec.dart';
 import 'journal_migration_preflight.dart';
 import 'journal_revision_codec.dart';
 import 'journal_transaction_store.dart';
 import 'sqlcipher_journal_stage.dart';
 
-/// Creates and independently reopens a journal-only migration candidate.
-/// No active vault, metadata migration, or activation is performed here.
+/// Creates and independently reopens a journal and legacy snapshot candidate.
+/// No active vault or activation is performed here.
 /// Only caller-owned private staging directories may be used.
 class SqlCipherMigrationCandidate {
   const SqlCipherMigrationCandidate._();
@@ -29,6 +30,7 @@ class SqlCipherMigrationCandidate {
     final expected = JournalRevisionCodec.decode(_expected(sourceSnapshot));
     final stage = await SqlCipherJournalStage.create(
       stagingRoot: stagingRoot, initial: expected.journal, key: key,
+      legacySnapshot: sourceSnapshot,
     );
     final file = stage.file;
     try {
@@ -52,6 +54,13 @@ class SqlCipherMigrationCandidate {
     final stage = await SqlCipherJournalStage.reopen(file: file, key: key);
     try {
       final actual = JournalRevisionCodec.encode(await stage.read());
+      final canonicalSource = FinanceBookCodec.encode(
+        FinanceBookCodec.decode(sourceSnapshot),
+      );
+      final storedSource = await stage.readLegacySnapshot();
+      if (storedSource != canonicalSource) {
+        throw const FormatException('Staged legacy metadata differs from source.');
+      }
       if (actual != expected) {
         throw const FormatException('Staged journal differs from source.');
       }

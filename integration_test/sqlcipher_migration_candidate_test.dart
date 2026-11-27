@@ -7,6 +7,7 @@ import 'package:tong_ledger/domain/demo_data.dart';
 import 'package:tong_ledger/domain/finance_models.dart';
 import 'package:tong_ledger/storage/finance_book_codec.dart';
 import 'package:tong_ledger/storage/sqlcipher_migration_candidate.dart';
+import 'package:tong_ledger/storage/sqlcipher_journal_stage.dart';
 
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
@@ -29,6 +30,12 @@ void main() {
         file: candidate, sourceSnapshot: FinanceBookCodec.encode(FinanceBook()),
         key: key,
       ), throwsFormatException);
+      final reopened = await SqlCipherJournalStage.reopen(file: candidate, key: key);
+      try {
+        expect(await reopened.readLegacySnapshot(), source);
+      } finally {
+        await reopened.close();
+      }
       expect(await original.readAsString(), 'fictional-original-ciphertext');
       expect(await candidate.exists(), isTrue);
     } finally {
