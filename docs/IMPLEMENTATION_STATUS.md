@@ -1,5 +1,8 @@
 # Tong Ledger — Implementation Status
 
+> **2026-11-04 P0 recovery review, NOT MERGED:** [Draft PR #7](https://github.com/parmtech/Tong-Ledger/pull/7) from clean main-based branch `feature/p0-portable-vault-recovery-clean` adds portable password-protected AES-GCM backup, a locked-vault recovery screen, staged rekey and preserved old ciphertext, Android native auto-backup exclusions and data integrity tests. Old diverged draft PR #6 was closed. The recovery feature remains **unverified on real Android devices**; the 16 scenarios in [Device Recovery Test Matrix](RECOVERY_DEVICE_TEST_MATRIX.md) are still **pending**. Current main stays a pre-release developer prototype. The independent accounting journal is still read-only.
+
+
 > **2026-11-04: P0 accounting safety milestone merged:** [PR #4](https://github.com/parmtech/Tong-Ledger/pull/4), commit `ab88997915be62a17c333c8fa48fca96197530bd`. The new [balanced journal projection](JOURNAL_PROJECTION_BRIDGE.md) translates all eight legacy entry types into debit/credit postings **without writing or migrating a single persisted record**. [GitHub Actions run 41648816107](https://github.com/parmtech/Tong-Ledger/actions/runs/41648816107) passed Dart analysis, tests and Android debug APK build. This is a tested domain bridge, **not a new production app release, an immutable persisted journal, or a data recovery guarantee**.
 >
 > **Critical backup blocker:** [Issue #5](https://github.com/parmtech/Tong-Ledger/issues/5) documents why the experimental `feature/v0.4-backup-recovery` branch cannot recover an existing vault after Android device-key invalidation. This branch must remain unmerged pending a recovery-only path and real-device tests.

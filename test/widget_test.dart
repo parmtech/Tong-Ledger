@@ -1,3 +1,5 @@
+// Keep the SDK Material import until a cross-platform migration is tested.
+// ignore: deprecated_member_use
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:tong_ledger/app/tong_ledger_app.dart';
@@ -20,6 +22,18 @@ class FakeFinanceStore implements FinanceStore {
   }
 }
 
+class FakeLockedVault implements RecoverableFinanceStore {
+  @override
+  Future<FinanceBook> load() async => throw StateError('Simulated missing key');
+
+  @override
+  Future<void> save(FinanceBook book) async =>
+      throw StateError('Cannot save locked vault');
+
+  @override
+  Future<void> restoreVerifiedBackup(FinanceBook restored) async {}
+}
+
 void main() {
   testWidgets('starts with empty local vault and usable bottom navigation',
       (tester) async {
@@ -27,7 +41,7 @@ void main() {
     await tester.pumpWidget(TongLedgerApp(store: store));
     await tester.pumpAndSettle();
     expect(find.text('TONG LEDGER'), findsOneWidget);
-    expect(find.text('PRIVATE LOCAL VAULT • BETA • BACKUP NOT READY'),
+    expect(find.text('PRIVATE LOCAL VAULT • BETA • BACKUP TESTING ONLY'),
         findsOneWidget);
     expect(find.byType(NavigationBar), findsOneWidget);
     expect(store.saves, 0);
@@ -62,5 +76,19 @@ void main() {
     expect(store.data.budgets.single.name, 'My Custom Budget');
     expect(find.text('My Custom Budget'), findsWidgets);
   });
+
+  testWidgets('locked vault opens password-protected recovery-only screen',
+      (tester) async {
+    await tester.pumpWidget(TongLedgerApp(store: FakeLockedVault()));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Recover from encrypted backup'), findsOneWidget);
+    await tester.tap(find.text('Recover from encrypted backup'));
+    await tester.pumpAndSettle();
+    expect(find.text('Backup & Restore'), findsOneWidget);
+    expect(find.text('Select encrypted backup'), findsOneWidget);
+    expect(find.text('Save .tlbackup file'), findsNothing);
+  });
+
 
 }

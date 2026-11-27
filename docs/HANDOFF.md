@@ -70,3 +70,13 @@ Flutter SDK/Android SDK not installed in conversation container; source validati
 - [P0 issue #5](https://github.com/parmtech/Tong-Ledger/issues/5): experimental v0.4 backup branch cannot restore a portable backup when the Android device key is missing and encrypted existing vault remains. Do not merge that branch until dedicated locked-vault restore, staged rekey/rollback, negative tests and actual-device recovery are verified.
 - Subsequent coding priority: account IDs/as-of dates and balanced immutable transactions with safe migration; portable backup recovery and storage trust gates; then beginner-first Home/Money/Budget/Activity/Insights UX.
 - Continue to use **fictional data** in debug builds. No release-signed AAB, no security certification, no iPhone/macOS/Linux/Windows build.
+
+## 2026-11-04 — ongoing P0 recovery review PR #7, no main merge
+
+- **Canonical active code review:** [PR #7](https://github.com/parmtech/Tong-Ledger/pull/7), branch `feature/p0-portable-vault-recovery-clean`, based on latest main. Original diverged [PR #6](https://github.com/parmtech/Tong-Ledger/pull/6) was **closed unmerged**; do not resume it.
+- Adds encrypted passphrase backups (.tlbackup), OS file picker, explicit user confirmation, recovery access from locked-vault screen, protected staging key, preservation of original ciphertext, and simulated process-kill/key-loss tests. **Old ciphertext preservation is NOT a guarantee of decryption without the old OS key.**
+- Adds `lib/storage/backup_integrity_validator.dart`: before accepting backup, reject unsupported/orphaned institution and account links and invalid legacy journal projections.
+- Flutter-generated Android native shell must run `python3 scripts/prepare_android.py` to disable Android Auto Backup and device transfer for key-bound local data. CI enforces this, but production pinned Android platform files and OEM checks are still required.
+- Review `docs/LOCKED_VAULT_RECOVERY_PROTOCOL.md`, `docs/RECOVERY_DEVICE_TEST_MATRIX.md`; all **16 device scenarios are pending** and no release security audit has occurred.
+- **Do not merge or claim production-safe recovery** until GitHub CI passes, Android device-to-device and Keystore failure tests are recorded, and backup migration/rollback has been reviewed. The experimental code is not a release or a guarantee of recoverability.
+- Next team task after recovery review: transactional encrypted journal DB and staged migration from v0.3 snapshot; then polished beginner-first navigation and screens per Blueprint v2.
