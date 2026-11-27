@@ -1,5 +1,8 @@
 # Changelog
 
+## 2026-11-27 — normalized encrypted journal (draft)
+- Schema-2 staging journal stores accounts, batches and postings separately, with transactional append and immutable-history guards. Legacy snapshot uses bounded encrypted BLOB chunks. Two native integration scenarios added; CI pending. No app activation.
+
 ## 2026-11-27 — native Android storage QA (draft)
 - Prior staging restart CI passed at 095e560. Add API 34 emulator workflow for native SQLCipher and secure-storage tests, plus two native integration scenarios. Native CI pending; no active vault or release change.
 

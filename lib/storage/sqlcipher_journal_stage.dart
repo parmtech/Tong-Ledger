@@ -8,17 +8,17 @@ import 'backup_integrity_validator.dart';
 import 'finance_book_codec.dart';
 import 'journal_revision_codec.dart';
 import 'journal_transaction_store.dart';
+import 'sqlcipher_journal_rows.dart';
 
-/// Experimental SQLCipher staging adapter. Never opens or replaces the legacy
-/// vault. Callers must supply a separate random 32-byte key and private
-/// app-owned staging directory. No activation or key lifecycle is provided.
+/// Isolated schema-2 migration stage. The existing application vault remains
+/// authoritative. Account registration after staging and activation are not
+/// supported here. Never upgrade an old experimental database in place.
 class SqlCipherJournalStage implements JournalTransactionStore {
   SqlCipherJournalStage._(this._db, this.file);
 
   final Database _db;
   final File file;
-  static const _table = 'journal_revision';
-  static const _maxBytes = 64 * 1024 * 1024;
+  static const _schemaVersion = 2;
 
   static String _password(List<int> key) {
     if (key.length != 32 || key.any((byte) => byte < 0 || byte > 255)) {
@@ -27,22 +27,19 @@ class SqlCipherJournalStage implements JournalTransactionStore {
     return base64Encode(key);
   }
 
-  static Future<void> _requireCipher(Database db) async {
+  static Future<void> _configure(Database db) async {
     final result = await db.rawQuery('PRAGMA cipher_version');
     if (result.isEmpty || result.first.values.isEmpty ||
         result.first.values.first == null ||
         result.first.values.first.toString().trim().isEmpty) {
       throw StateError('Native SQLCipher unavailable.');
     }
-  }
-
-  static String _encode(JournalRevision state) {
-    final payload = JournalRevisionCodec.encode(state);
-    if (utf8.encode(payload).length > _maxBytes) {
-      throw const FormatException('Journal payload exceeds staging limit.');
+    await db.execute('PRAGMA foreign_keys = ON');
+    final foreignKeys = await db.rawQuery('PRAGMA foreign_keys');
+    if (foreignKeys.length != 1 || foreignKeys.single.values.single != 1) {
+      throw StateError('Foreign-key enforcement unavailable.');
     }
-    JournalRevisionCodec.decode(payload);
-    return payload;
+    await db.execute('PRAGMA synchronous = FULL');
   }
 
   static Future<SqlCipherJournalStage> create({
@@ -52,7 +49,8 @@ class SqlCipherJournalStage implements JournalTransactionStore {
     String? legacySnapshot,
   }) async {
     final password = _password(key);
-    final payload = _encode(JournalRevision(number: 0, journal: initial));
+    final state = JournalRevision(number: 0, journal: initial);
+    final expected = SqlCipherJournalRows.validate(state);
     String? canonicalSnapshot;
     if (legacySnapshot != null) {
       final book = FinanceBookCodec.decode(legacySnapshot);
@@ -61,9 +59,10 @@ class SqlCipherJournalStage implements JournalTransactionStore {
       final projected = JournalRevisionCodec.encode(JournalRevision(
         number: 0, journal: BalancedJournal.fromLegacy(book),
       ));
-      if (projected != payload) {
+      if (projected != expected) {
         throw const FormatException('Legacy snapshot differs from initial journal.');
       }
+      SqlCipherJournalRows.validateSnapshot(canonicalSnapshot);
     }
     final directory = await stagingRoot.createTemp('sqlcipher-stage-');
     final file = File('${directory.path}${Platform.pathSeparator}journal.db');
@@ -71,29 +70,16 @@ class SqlCipherJournalStage implements JournalTransactionStore {
     try {
       final opened = await openDatabase(
         file.path, password: password, singleInstance: false,
-        version: 1,
-        onConfigure: _requireCipher,
-        onCreate: (database, version) async {
-          await database.execute(
-            'CREATE TABLE $_table (id INTEGER PRIMARY KEY CHECK(id = 1), '
-            'revision INTEGER NOT NULL CHECK(revision >= 0), '
-            'payload TEXT NOT NULL)',
-          );
-          await database.insert(_table, {'id': 1, 'revision': 0, 'payload': payload});
-          await database.execute(
-            'CREATE TABLE legacy_snapshot (id INTEGER PRIMARY KEY CHECK(id = 1), '
-            'payload TEXT NOT NULL)',
-          );
-          if (canonicalSnapshot != null) {
-            await database.insert('legacy_snapshot', {
-              'id': 1, 'payload': canonicalSnapshot,
-            });
-          }
-        },
+        version: _schemaVersion, onConfigure: _configure,
+        onCreate: (database, version) =>
+            SqlCipherJournalRows.initialize(database, state, canonicalSnapshot),
       );
       db = opened;
       final stage = SqlCipherJournalStage._(opened, file);
-      await stage.read();
+      if (JournalRevisionCodec.encode(await stage.read()) != expected ||
+          await stage.readLegacySnapshot() != canonicalSnapshot) {
+        throw const FormatException('Normalized database readback mismatch.');
+      }
       return stage;
     } catch (_) {
       await db?.close();
@@ -102,7 +88,7 @@ class SqlCipherJournalStage implements JournalTransactionStore {
     }
   }
 
-  /// Reopen an existing staging file only; never initialize a missing file.
+  /// Reject earlier experimental schemas; never silently replace a file.
   static Future<SqlCipherJournalStage> reopen({
     required File file,
     required List<int> key,
@@ -113,14 +99,15 @@ class SqlCipherJournalStage implements JournalTransactionStore {
     }
     final db = await openDatabase(
       file.path, password: password, singleInstance: false,
-      onConfigure: _requireCipher,
+      onConfigure: _configure,
     );
     try {
-      if (await db.getVersion() != 1) {
+      if (await db.getVersion() != _schemaVersion) {
         throw const FormatException('Unsupported staging database schema.');
       }
       final stage = SqlCipherJournalStage._(db, file);
       await stage.read();
+      await stage.readLegacySnapshot();
       return stage;
     } catch (_) {
       await db.close();
@@ -128,31 +115,16 @@ class SqlCipherJournalStage implements JournalTransactionStore {
     }
   }
 
-  static Future<JournalRevision> _read(DatabaseExecutor db) async {
-    final rows = await db.query(_table, limit: 2);
-    if (rows.length != 1 || rows.single['id'] != 1) {
-      throw const FormatException('Invalid journal state row.');
-    }
-    final payload = rows.single['payload'];
-    if (payload is! String || utf8.encode(payload).length > _maxBytes) {
-      throw const FormatException('Invalid journal payload.');
-    }
-    final state = JournalRevisionCodec.decode(payload);
-    if (rows.single['revision'] != state.number) {
-      throw const FormatException('Journal revision mismatch.');
-    }
-    return state;
-  }
-
   @override
-  Future<JournalRevision> read() => _read(_db);
+  Future<JournalRevision> read() =>
+      _db.transaction((txn) => SqlCipherJournalRows.read(txn));
 
   @override
   Future<JournalRevision> append({
     required int expectedRevision,
     required JournalBatch batch,
   }) => _db.transaction((txn) async {
-    final before = await _read(txn);
+    final before = await SqlCipherJournalRows.read(txn);
     if (before.number != expectedRevision) {
       throw const JournalWriteConflict();
     }
@@ -163,25 +135,26 @@ class SqlCipherJournalStage implements JournalTransactionStore {
         batches: [...before.journal.batches, batch],
       ),
     );
+    SqlCipherJournalRows.validate(after);
+    // Only the new batch, its postings and the revision are written.
+    // Failure of any statement rolls the entire transaction back.
+    await SqlCipherJournalRows.insertBatch(
+      txn, before.journal.batches.length, batch,
+    );
     final changed = await txn.update(
-      _table, {'revision': after.number, 'payload': _encode(after)},
+      'journal_revision', {'revision': after.number},
       where: 'id = ? AND revision = ?', whereArgs: [1, expectedRevision],
     );
     if (changed != 1) throw const JournalWriteConflict();
     return after;
   });
 
-  /// Immutable migration source, not the current financial state after edits.
+  /// Historical migration evidence, not live financial state after edits.
   Future<String?> readLegacySnapshot() async {
-    final rows = await _db.query('legacy_snapshot', limit: 2);
-    if (rows.isEmpty) return null;
-    if (rows.length != 1 || rows.single['id'] != 1) {
-      throw const FormatException('Invalid legacy snapshot row.');
-    }
-    final payload = rows.single['payload'];
-    if (payload is! String) {
-      throw const FormatException('Invalid legacy snapshot payload.');
-    }
+    final payload = await _db.transaction(
+      (txn) => SqlCipherJournalRows.readSnapshot(txn),
+    );
+    if (payload == null) return null;
     final book = FinanceBookCodec.decode(payload);
     BackupIntegrityValidator.validate(book);
     if (FinanceBookCodec.encode(book) != payload) {

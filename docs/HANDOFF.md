@@ -1,5 +1,9 @@
 # Permanent Engineering Handoff — Tong Ledger
 
+## 2026-11-27 — normalized encrypted journal (draft)
+- New schema-2 staging row layout and transactional append; readback validates canonical journal, revision and posting ordinals. BLOB snapshot chunks and append-only SQL guards are tested by new native fixtures. CI pending. No production activation or automatic schema-1 upgrade.
+- Next: review native results; implement an app-compatible repository and full-state backup/restore, safe activation, metadata and account changes, app lock/privacy and physical-device failure tests. Do not use real data or merge unverified drafts.
+
 ## 2026-11-27 — native storage QA checkpoint
 - Verified staging recovery baseline 095e560 via [CI 45950291826](https://github.com/parmtech/Tong-Ledger/actions/runs/45950291826). Separate emulator workflow added to run all native integration tests, including real secure-storage reuse and a SQLite abort rollback fixture. Native results pending. See ANDROID_NATIVE_STORAGE_QA.md.
 - Next: inspect native CI failures/results, complete normalized/active storage design, explicit activation and rollback with independent portable backup, app lock/privacy, and physical-device QA. Keep drafts unmerged; no signing or production release.

@@ -1,5 +1,7 @@
 # Tong Ledger — Implementation Status
 
+> **2026-11-27 — normalized encrypted journal (draft):** Schema-2 staging adapter implements separate indexed posting tables, revision-checked append and chunked historical metadata. Native integration tests added; CI pending. Old experimental schemas fail closed. Active app integration, current metadata updates, portable backup of new state and device security gates remain open.
+
 > **2026-11-27 — native storage QA (draft):** Prior staging recovery CI [45950291826](https://github.com/parmtech/Tong-Ledger/actions/runs/45950291826) passed. Add Android emulator integration workflow and native key/rollback tests. Emulator run pending; production database, app-lock/privacy and physical-device recovery gates remain open.
 
 > **2026-11-27 — encrypted journal staging fixture (draft, CI pending):** PR #8 now includes a staging-only encrypted journal artifact and five additional tests. No production key provisioning, database activation, schema switch or migration guarantee. CI pending for new head.
