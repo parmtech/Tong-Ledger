@@ -1,5 +1,9 @@
 # Permanent Engineering Handoff — Tong Ledger
 
+## 2026-11-27 — native storage QA checkpoint
+- Verified staging recovery baseline 095e560 via [CI 45950291826](https://github.com/parmtech/Tong-Ledger/actions/runs/45950291826). Separate emulator workflow added to run all native integration tests, including real secure-storage reuse and a SQLite abort rollback fixture. Native results pending. See ANDROID_NATIVE_STORAGE_QA.md.
+- Next: inspect native CI failures/results, complete normalized/active storage design, explicit activation and rollback with independent portable backup, app lock/privacy, and physical-device QA. Keep drafts unmerged; no signing or production release.
+
 ## 2026-11-27 — encrypted journal staging fixture (draft, CI pending)
 - PR #8 adds encrypted staging candidate creation/readback and strict source/posting parity. Dedicated temporary directory per candidate; no existing vault writes. Five additional regression tests use fictional data.
 - Next: select and review encrypted SQLite implementation, create transactional staging schema and compare persisted rows; design key lifecycle, durable activation, rollback, low-disk/process-death QA. Do not activate or merge before review.

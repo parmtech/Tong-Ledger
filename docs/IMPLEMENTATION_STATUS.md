@@ -1,5 +1,7 @@
 # Tong Ledger — Implementation Status
 
+> **2026-11-27 — native storage QA (draft):** Prior staging recovery CI [45950291826](https://github.com/parmtech/Tong-Ledger/actions/runs/45950291826) passed. Add Android emulator integration workflow and native key/rollback tests. Emulator run pending; production database, app-lock/privacy and physical-device recovery gates remain open.
+
 > **2026-11-27 — encrypted journal staging fixture (draft, CI pending):** PR #8 now includes a staging-only encrypted journal artifact and five additional tests. No production key provisioning, database activation, schema switch or migration guarantee. CI pending for new head.
 
 > **2026-11-27 — P0 journal migration preflight (draft, unverified):** New isolated migration preflight validates canonical source/candidate equality, backup integrity and exact cash/card/loan/income/expense parity. Five new tests await CI. Parent recovery branch passed [CI 45944279625](https://github.com/parmtech/Tong-Ledger/actions/runs/45944279625); device QA still pending. No active database or schema migration.
