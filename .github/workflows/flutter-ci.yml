@@ -31,7 +31,30 @@ jobs:
       - name: Get dependencies
         run: flutter pub get
       - name: Analyse source
-        run: flutter analyze
+        shell: bash
+        run: |
+          set -o pipefail
+          if flutter analyze 2>&1 | tee flutter-analysis.log; then
+            exit 0
+          fi
+          python3 - <<'PY'
+          import re
+          from pathlib import Path
+          for line in Path("flutter-analysis.log").read_text(errors="replace").splitlines():
+              line = re.sub(r"\x1b\[[0-9;]*m", "", line).strip()
+              if re.match(r"^(error|warning|info)\s", line, re.I):
+                  escaped = line.replace("%", "%25").replace("\r", "%0D").replace("\n", "%0A")
+                  print("::error::" + escaped)
+          PY
+          exit 1
+      - name: Retain analyzer diagnostics on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: flutter-analysis-diagnostics
+          path: flutter-analysis.log
+          if-no-files-found: ignore
+          retention-days: 7
       - name: Unit and widget tests
         run: flutter test
       - name: Build Android debug APK (NOT A RELEASE)
