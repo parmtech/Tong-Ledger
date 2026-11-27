@@ -87,6 +87,41 @@ void main() {
     expect(plaintext, contains('Commonwealth Bank'));
   });
 
+  test('wrong but correctly sized primary key cannot overwrite vault', () async {
+    await store.save(createDemoBook());
+    final before = await vault().readAsString();
+    const slot = 'tong_ledger_snapshot_key_v1';
+    final originalKey = keys.slots[slot]!;
+    final wrongKey = base64Decode(originalKey);
+    wrongKey[0] ^= 1;
+    keys.slots[slot] = base64Encode(wrongKey);
+
+    await expectLater(store.save(FinanceBook()),
+        throwsA(isA<SecureStorageFailure>()));
+    expect(await vault().readAsString(), before);
+
+    keys.slots[slot] = originalKey;
+    expect((await store.load()).institutions, isNotEmpty);
+  });
+
+  test('corrupt active ciphertext cannot be silently replaced by save', () async {
+    await store.save(createDemoBook());
+    await vault().writeAsString('corrupt-vault', flush: true);
+    await expectLater(store.save(FinanceBook()),
+        throwsA(isA<SecureStorageFailure>()));
+    expect(await vault().readAsString(), 'corrupt-vault');
+  });
+
+  test('candidate without active vault blocks normal save', () async {
+    final candidate = File('${vault().path}.recovery.pending');
+    await candidate.writeAsString('unfinished-candidate', flush: true);
+    await expectLater(store.save(FinanceBook()),
+        throwsA(isA<SecureStorageFailure>()));
+    expect(await vault().exists(), false);
+    expect(await candidate.readAsString(), 'unfinished-candidate');
+    expect(keys.slots, isEmpty);
+  });
+
   test('interrupted key promotion can be recovered after process restart',
       () async {
     await store.save(createDemoBook());

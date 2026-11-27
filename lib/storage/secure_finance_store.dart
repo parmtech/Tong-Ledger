@@ -161,12 +161,25 @@ class SecureFinanceStore implements RecoverableFinanceStore {
     final json = FinanceBookCodec.encode(book);
     FinanceBookCodec.decode(json);
     final file = await _file();
-    if (await _marker(file).exists()) {
+    final existingFile = await file.exists();
+    if (await _marker(file).exists() ||
+        (!existingFile && await _candidate(file).exists())) {
       throw const SecureStorageFailure(
         'Recovery needs attention before normal saving can continue.',
       );
     }
-    final key = await _primaryKey(existingFile: await file.exists());
+    final key = await _primaryKey(existingFile: existingFile);
+    // A correctly sized key is not proof that it unlocks the existing vault.
+    // Authenticate before replacing any ciphertext with a normal save.
+    if (existingFile) {
+      try {
+        await _decrypt(file, key);
+      } catch (_) {
+        throw const SecureStorageFailure(
+          'Existing vault could not be authenticated. No data was overwritten.',
+        );
+      }
+    }
     final envelope = await _cipher.encrypt(json, key);
     final temp = File('${file.path}.pending');
     try {
