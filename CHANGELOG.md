@@ -1,5 +1,8 @@
 # Changelog
 
+## 2026-11-27 — native Android storage QA (draft)
+- Prior staging restart CI passed at 095e560. Add API 34 emulator workflow for native SQLCipher and secure-storage tests, plus two native integration scenarios. Native CI pending; no active vault or release change.
+
 ## 2026-11-27 — encrypted journal staging fixture (draft, CI pending)
 - Add a unique ciphertext-only migration candidate with readback and independent posting verification; five regression tests. Not a transactional database or active migration.
 
