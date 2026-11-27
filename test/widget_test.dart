@@ -1,3 +1,5 @@
+// Keep the SDK Material import until a cross-platform migration is tested.
+// ignore: deprecated_member_use
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:tong_ledger/app/tong_ledger_app.dart';
