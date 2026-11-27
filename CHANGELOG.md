@@ -1,5 +1,8 @@
 # Changelog
 
+## 2026-11-27 — encrypted journal staging fixture (draft, CI pending)
+- Add a unique ciphertext-only migration candidate with readback and independent posting verification; five regression tests. Not a transactional database or active migration.
+
 ## 2026-11-27 — P0 journal migration preflight (draft, unverified)
 - Added a read-only canonical record and account-level parity gate with five regression tests; no database adapter, active vault mutation or release. Parent recovery CI [45944279625](https://github.com/parmtech/Tong-Ledger/actions/runs/45944279625) passed. New CI pending.
 

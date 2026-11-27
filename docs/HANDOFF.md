@@ -1,5 +1,9 @@
 # Permanent Engineering Handoff — Tong Ledger
 
+## 2026-11-27 — encrypted journal staging fixture (draft, CI pending)
+- PR #8 adds encrypted staging candidate creation/readback and strict source/posting parity. Dedicated temporary directory per candidate; no existing vault writes. Five additional regression tests use fictional data.
+- Next: select and review encrypted SQLite implementation, create transactional staging schema and compare persisted rows; design key lifecycle, durable activation, rollback, low-disk/process-death QA. Do not activate or merge before review.
+
 ## 2026-11-27 — P0 journal migration preflight (draft, unverified)
 - Parent: recovery branch commit `f1c3bbb3d4c4dbf24aaed6526be9198970d3509b`, verified CI run [45944279625](https://github.com/parmtech/Tong-Ledger/actions/runs/45944279625). New branch `feature/p0-journal-migration-preflight` adds an in-memory migration preflight and five tests; no source vault replacement. CI for this slice pending.
 - Next: review SQLCipher binding/platform/licence choices, implement a staging adapter with encrypted data and rollback, then compare source/candidate via this gate. Keep both draft branches unmerged pending recovery device QA and review; no signed release.
