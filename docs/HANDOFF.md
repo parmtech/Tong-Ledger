@@ -1,5 +1,9 @@
 # Permanent Engineering Handoff — Tong Ledger
 
+## 2026-11-27 — P0 journal migration preflight (draft, unverified)
+- Parent: recovery branch commit `f1c3bbb3d4c4dbf24aaed6526be9198970d3509b`, verified CI run [45944279625](https://github.com/parmtech/Tong-Ledger/actions/runs/45944279625). New branch `feature/p0-journal-migration-preflight` adds an in-memory migration preflight and five tests; no source vault replacement. CI for this slice pending.
+- Next: review SQLCipher binding/platform/licence choices, implement a staging adapter with encrypted data and rollback, then compare source/candidate via this gate. Keep both draft branches unmerged pending recovery device QA and review; no signed release.
+
 > **IMPORTANT — Blueprint Audit 2026-11-03:** New coding must use [MASTER_BLUEPRINT_V2.md](MASTER_BLUEPRINT_V2.md), [BLUEPRINT_AUDIT_2026_11_03.md](BLUEPRINT_AUDIT_2026_11_03.md), [UX_INFORMATION_ARCHITECTURE_V2.md](UX_INFORMATION_ARCHITECTURE_V2.md), [FINANCIAL_DOMAIN_V2.md](FINANCIAL_DOMAIN_V2.md), [ENGINEERING_ROADMAP_V2.md](ENGINEERING_ROADMAP_V2.md). Existing notes below contain historical v0.2/v0.3 milestone information. The current main code is v0.3 and **has not implemented the v2 targets**. `feature/v0.4-backup-recovery` is unfinished and must be audited before merge. Do not build financial functionality directly from historical spec without consulting v2. Backup/recovery and P0 accounting integrity take precedence over visual extras.
 
 **Source of truth:** https://github.com/parmtech/Tong-Ledger

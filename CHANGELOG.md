@@ -1,5 +1,8 @@
 # Changelog
 
+## 2026-11-27 — P0 journal migration preflight (draft, unverified)
+- Added a read-only canonical record and account-level parity gate with five regression tests; no database adapter, active vault mutation or release. Parent recovery CI [45944279625](https://github.com/parmtech/Tong-Ledger/actions/runs/45944279625) passed. New CI pending.
+
 ## Experimental / unmerged — portable recovery prototype (2026-11-04)
 - [Draft PR #7](https://github.com/parmtech/Tong-Ledger/pull/7) adds encrypted user-controlled backup import/export and locked-vault replacement; old PR #6 is closed, unmerged.
 - Added staged device rekey, preservation of old encrypted ciphertext, interrupted recovery tests, foreign-key/journal validation and enforced Android native backup exclusions for CI-generated platform files.
